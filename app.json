@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "SU25-SU25SE113_Dak-Lak-Coffee-Supply-Chain_Mobile",
-    "slug": "SU25-SU25SE113_Dak-Lak-Coffee-Supply-Chain_Mobile",
+    "name": "Cà Phê Đắk Lắk",
+    "slug": "Cà Phê Đắk Lắk",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,6 +24,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
