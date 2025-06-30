@@ -83,3 +83,14 @@ app/
 .env                         # Env file (API_URL, ...)
 app.json                     # Expo config
 tailwind.config.js           # Tailwind (nativewind)
+
+🛠 Getting Started (Development)
+# 1. Cài đặt dependency
+npm install
+
+# 2. Khởi chạy Expo dev server
+npx expo start
+
+# 3. Cấu hình .env.local
+NEXT_PUBLIC_API_URL=http://<your-backend-url>:8080
+
