@@ -1,45 +1,50 @@
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+// Hàm tiện lợi để tạo icon
+const createTabIcon = (iconName: keyof typeof MaterialCommunityIcons.glyphMap) => ({ color, size }: { color: string; size: number }) => (
+    <MaterialCommunityIcons name={iconName} color={color} size={size} />
+);
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
-  );
+export default function TabsLayout() {
+    return (
+        <Tabs
+            screenOptions={{
+                headerShown: false,
+                tabBarActiveTintColor: '#FD7622',
+                tabBarInactiveTintColor: '#888',
+                tabBarLabelStyle: { fontSize: 13 },
+                tabBarStyle: {
+                    paddingBottom: 4,
+                    height: 60,
+                    borderTopWidth: 0.5,
+                    borderTopColor: '#ddd',
+                    backgroundColor: '#fff',
+                },
+            }}
+        >
+            <Tabs.Screen
+                name="home/index"
+                options={{
+                    title: 'Trang chủ',
+                    tabBarIcon: createTabIcon('home'),
+                }}
+            />
+            <Tabs.Screen
+                name="support/index"
+                options={{
+                    title: 'Hỗ trợ',
+                    tabBarIcon: createTabIcon('lifebuoy'),
+                }}
+            />
+            <Tabs.Screen
+                name="profile/index"
+                options={{
+                    title: 'Tài khoản',
+                    tabBarIcon: createTabIcon('account-circle'),
+                }}
+            />
+        </Tabs>
+    );
 }
