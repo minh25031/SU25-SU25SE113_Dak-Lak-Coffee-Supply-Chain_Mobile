@@ -1,50 +1,85 @@
-# Welcome to your Expo app 👋
+# 📱 DakLakCoffeeSupplyChain_Mobile (Farmer App)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Mobile App for Farmers in the Dak Lak Coffee Supply Chain Management System**
 
-## Get started
+📅 **Duration:** May 2025 – August 2025  
+🎓 **Capstone Project** – FPT University | Software Engineering
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## 👥 Team Members
 
-2. Start the app
+| Name                      | ID        | Role         |
+|---------------------------|-----------|--------------|
+| Lê Hoàng Phúc             | SE173083  | Project Lead |
+| Nguyễn Nhật Minh          | SE161013  |              |
+| Lê Hoàng Thiên Vũ         | SE160593  |              |
+| Phạm Huỳnh Xuân Đăng      | SE161782  |              |
+| Phạm Trường Nam           | SE150442  |              |
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## ⚙️ Tech Stack
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+| Layer       | Technology                             |
+|-------------|-----------------------------------------|
+| Framework   | **React Native (Expo)**                 |
+| Language    | TypeScript                              |
+| Navigation  | React Navigation v6                     |
+| Styling     | Tailwind CSS (via Nativewind)           |
+| Auth        | JWT (stored in `AsyncStorage`)          |
+| State Mgmt  | React Hooks, Context API                |
+| API Access  | RESTful (via Axios)                     |
+| Dev Tools   | Expo Go, JSON Server (optional mock)    |
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## 🌾 App Purpose
 
-When you're ready, run:
+Ứng dụng này được thiết kế **dành riêng cho người nông dân** trong chuỗi cung ứng cà phê tại Đắk Lắk, giúp họ:
+
+- Đăng ký mùa vụ
+- Theo dõi tiến độ trồng và chăm sóc cây
+- Gửi cập nhật sản lượng
+- Nhận phản hồi từ chuyên gia
+
+---
+
+## 🧩 Main Features for Farmers
+
+| Chức năng                     | Mô tả                                                                 |
+|-------------------------------|----------------------------------------------------------------------|
+| 🌱 Quản lý mùa vụ             | Xem danh sách mùa vụ đã đăng ký, chi tiết từng mùa vụ               |
+| 🧾 Gửi cập nhật tiến độ       | Cập nhật hoạt động canh tác theo từng giai đoạn                     |
+| 📦 Gửi sản lượng thu hoạch    | Gửi thông tin sản lượng cho hợp tác xã/doanh nghiệp                 |
+| 🧠 Yêu cầu phản hồi chuyên gia| Gửi câu hỏi, hình ảnh đến chuyên gia nông nghiệp                    |
+| 👤 Trang cá nhân              | Xem & chỉnh sửa thông tin người dùng                                |
+
+---
+
+## 🗂 Project Structure
 
 ```bash
-npm run reset-project
-```
+📦 DakLakCoffee_Mobile
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+app/
+├── navigation/              # Stack navigation cho Farmer
+├── screens/
+│   ├── auth/                # Login, Register
+│   ├── farmer/
+│   │   ├── cropSeasons/     # Mùa vụ
+│   │   ├── progressLogs/    # Nhật ký tiến độ
+│   │   ├── harvestReports/  # Gửi sản lượng
+│   │   └── feedback/        # Yêu cầu phản hồi
+│   └── profile/             # Trang cá nhân
 
-## Learn more
+├── components/              # UI components (Card, Modal, etc.)
+├── services/                # Axios API services
+├── contexts/                # Auth context
+├── utils/                   # formatDate, slugify, etc.
+├── constants/               # API endpoints, enums
+├── assets/                  # Ảnh logo, minh họa
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+.env                         # Env file (API_URL, ...)
+app.json                     # Expo config
+tailwind.config.js           # Tailwind (nativewind)
