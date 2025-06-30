@@ -1,13 +1,9 @@
-// core/api/auth.ts
-import axios from 'axios';
-
-const API_BASE_URL = 'http://10.0.2.2:5077/api';
+import api from "./axiosClient";
 
 export async function loginFarmer(email: string, password: string): Promise<string> {
-  const response = await axios.post(`${API_BASE_URL}/Auth/login`, {
+  const response = await api.post('/Auth/login', {
     email,
     password,
   });
-    return response.data;
-
+  return response.data;
 }

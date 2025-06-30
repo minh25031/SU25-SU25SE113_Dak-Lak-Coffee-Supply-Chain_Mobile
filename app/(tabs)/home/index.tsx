@@ -10,9 +10,10 @@ import WeatherTicker from '@/components/WeatherTicker';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 
+
 // Dashboard menu config
 const dashboardItems = [
-    { title: 'Mùa vụ của tôi', icon: 'file-document', route: '/plan' },
+    { title: 'Mùa vụ của tôi', icon: 'file-document', route: '/cropseason' },
     { title: 'Mùa vụ cà phê', icon: 'sprout', route: '/season' },
     { title: 'Gửi sự cố mùa vụ', icon: 'alert', route: '/season/issues' },
     { title: 'Ghi nhận thu hoạch', icon: 'clipboard-list', route: '/harvest' },
