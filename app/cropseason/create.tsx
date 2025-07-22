@@ -1,9 +1,10 @@
-import React from 'react'
+import React from 'react';
+import { Text, View } from 'react-native';
 
-function Create() {
+export default function Create() {
     return (
-        <div>Tạo mùa vụ</div>
-    )
+        <View>
+            <Text>Tạo mùa vụ</Text>
+        </View>
+    );
 }
-
-export default Create

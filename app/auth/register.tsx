@@ -8,7 +8,7 @@ import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Logo from '../../components/Logo';
 import TextInput from '../../components/TextInput';
-import { emailValidator, nameValidator, passwordValidator } from '../../core/utils';
+import { emailValidator, nameValidator, passwordValidator } from '../../core/utils/emailValidator';
 
 export default function RegisterScreen() {
     const router = useRouter();

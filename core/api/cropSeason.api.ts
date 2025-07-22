@@ -1,6 +1,11 @@
-import api from "../api/axiosClient"; // axios instance đã có baseURL & token
+import api from "../api/axiosClient";
 
 export const getAllCropSeasons = async () => {
-  const response = await api.get("/CropSeasons"); // gọi http://10.0.2.2:5077/api/CropSeasons
+  const response = await api.get("/CropSeasons");
   return response.data;
+};
+
+export const getCropSeasonById = async (id: string) => {
+  const res = await api.get(`/CropSeasons/${id}`);
+  return res.data;
 };
