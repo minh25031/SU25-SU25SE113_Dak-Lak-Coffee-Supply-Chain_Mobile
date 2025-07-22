@@ -1,10 +1,18 @@
 import BackButton from "@/components/BackButton";
-import { getAllCropSeasons } from "@/core/api/cropSeason.api";
-import { CropSeasonStatus, CropSeasonStatusLabels } from "@/core/enums/CropSeasonStatus";
+import {
+    CropSeasonListItem,
+    deleteCropSeasonById,
+    getAllCropSeasons,
+} from "@/core/api/cropSeason.api";
+import {
+    CropSeasonStatus,
+    CropSeasonStatusLabels,
+} from "@/core/enums/CropSeasonStatus";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     Pressable,
     StyleSheet,
@@ -12,25 +20,15 @@ import {
     View,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
+import { Snackbar } from "react-native-paper";
 import CropSeasonCard from "./components/CropSeasonCard";
 
-interface CropSeason {
-    cropSeasonId: string;
-    seasonName: string;
-    startDate: string;
-    endDate: string;
-    area: number;
-    farmerName: string;
-    status: string;
-}
-
 export default function CropSeasonListScreen() {
-    const [data, setData] = useState<CropSeason[]>([]);
-    const [filteredData, setFilteredData] = useState<CropSeason[]>([]);
+    const [data, setData] = useState<CropSeasonListItem[]>([]);
+    const [filteredData, setFilteredData] = useState<CropSeasonListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    // Dropdown: Trạng thái
     const [statusOpen, setStatusOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<string | null>("all");
     const [statusItems, setStatusItems] = useState([
@@ -41,45 +39,71 @@ export default function CropSeasonListScreen() {
         })),
     ]);
 
-    const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        const day = date.getDate().toString().padStart(2, "0");
-        const month = (date.getMonth() + 1).toString().padStart(2, "0");
-        const year = date.getFullYear();
-        return `${day}/${month}/${year}`;
+    const [snackbarVisible, setSnackbarVisible] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState("");
+
+    const showSnackbar = (msg: string) => {
+        setSnackbarMessage(msg);
+        setSnackbarVisible(true);
+    };
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const response = await getAllCropSeasons();
+            setData(response);
+            setFilteredData(response);
+        } catch (error: any) {
+            showSnackbar("Lỗi khi tải danh sách mùa vụ.");
+            console.error("Lỗi khi tải mùa vụ:", error.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await getAllCropSeasons();
-                setData(response);
-                setFilteredData(response);
-            } catch (error: any) {
-                console.error("Lỗi khi tải mùa vụ:", error.message);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchData();
     }, []);
 
     useEffect(() => {
-        const filtered = data.filter((item) => {
-            return selectedStatus === "all" || item.status === selectedStatus;
-        });
+        const filtered = data.filter(
+            (item) => selectedStatus === "all" || item.status === selectedStatus
+        );
         setFilteredData(filtered);
     }, [selectedStatus, data]);
 
-    const renderItem = ({ item }: { item: CropSeason }) => (
+    const handleDelete = (id: string) => {
+        Alert.alert("Xác nhận xoá", "Bạn có chắc muốn xoá mùa vụ này?", [
+            { text: "Huỷ", style: "cancel" },
+            {
+                text: "Xoá",
+                style: "destructive",
+                onPress: async () => {
+                    const res = await deleteCropSeasonById(id);
+                    if (res.code === 200) {
+                        showSnackbar("Đã xoá mùa vụ.");
+                        fetchData(); // làm mới dữ liệu
+                    } else {
+                        showSnackbar(res.message || "Xoá thất bại.");
+                    }
+                },
+            },
+        ]);
+    };
+
+    const renderItem = ({ item }: { item: CropSeasonListItem }) => (
         <CropSeasonCard
+            cropSeasonId={item.cropSeasonId}
             seasonName={item.seasonName}
             startDate={item.startDate}
             endDate={item.endDate}
             area={item.area}
             farmerName={item.farmerName}
             status={item.status}
-            onPress={() => router.push(`/cropseason/${item.cropSeasonId}`)} cropSeasonId={""} />
+            onPress={() => router.push(`/cropseason/${item.cropSeasonId}`)}
+            onEdit={() => router.push(`/cropseason/update/${item.cropSeasonId}`)}
+            onDelete={() => handleDelete(item.cropSeasonId)}
+        />
     );
 
     return (
@@ -99,6 +123,7 @@ export default function CropSeasonListScreen() {
                     style={styles.dropdown}
                     textStyle={{ fontSize: 14 }}
                     zIndex={1000}
+                    zIndexInverse={1000}
                 />
             </View>
 
@@ -120,41 +145,37 @@ export default function CropSeasonListScreen() {
                     </Pressable>
                 </>
             )}
+
+            <Snackbar
+                visible={snackbarVisible}
+                onDismiss={() => setSnackbarVisible(false)}
+                duration={3000}
+                action={{
+                    label: "Đóng",
+                    onPress: () => setSnackbarVisible(false),
+                }}
+            >
+                {snackbarMessage}
+            </Snackbar>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#FEFAF4", padding: 16 },
-    title: { fontSize: 24, fontWeight: "bold", color: "#D74F0F", marginBottom: 12 },
+    title: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#D74F0F",
+        marginBottom: 12,
+    },
     dropdownContainer: {
-        zIndex: 10,
+        zIndex: 1000,
         marginBottom: 16,
     },
     dropdown: {
         marginBottom: 8,
         borderColor: "#D6D3D1",
-    },
-    card: {
-        backgroundColor: "#fff",
-        padding: 16,
-        borderRadius: 16,
-        marginBottom: 12,
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 5,
-        elevation: 3,
-    },
-    name: { fontSize: 18, fontWeight: "bold", color: "#374151", marginBottom: 6 },
-    row: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginTop: 4,
-    },
-    rowText: {
-        marginLeft: 6,
-        color: "#374151",
-        fontSize: 14,
     },
     addButton: {
         position: "absolute",

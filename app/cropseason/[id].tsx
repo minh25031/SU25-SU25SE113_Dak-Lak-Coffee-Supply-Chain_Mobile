@@ -1,4 +1,5 @@
 import BackButton from "@/components/BackButton";
+import type { CropSeason } from "@/core/api/cropSeason.api";
 import { getCropSeasonById } from "@/core/api/cropSeason.api";
 import { getCropSeasonStatusLabel } from "@/core/enums/cropSeasonDetailStatus";
 
@@ -13,30 +14,6 @@ import {
     View,
 } from "react-native";
 import CropSeasonDetailItem from "./components/CropSeasonDetailItem";
-
-interface CropSeasonDetail {
-    detailId: string;
-    typeName: string;
-    areaAllocated: number;
-    expectedHarvestStart: string;
-    expectedHarvestEnd: string;
-    estimatedYield: number;
-    plannedQuality: string;
-    status: string;
-}
-
-interface CropSeason {
-    cropSeasonId: string;
-    seasonName: string;
-    startDate: string;
-    endDate: string;
-    area: number;
-    note: string;
-    farmerName: string;
-    registrationCode: string;
-    status: string;
-    details: CropSeasonDetail[];
-}
 
 export default function CropSeasonDetailScreen() {
     const { id } = useLocalSearchParams();
