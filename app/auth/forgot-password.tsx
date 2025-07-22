@@ -7,7 +7,7 @@ import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Logo from '../../components/Logo';
 import TextInput from '../../components/TextInput';
-import { emailValidator } from '../../core/utils';
+import { emailValidator } from '../../core/utils/emailValidator';
 
 export default function ForgotPasswordScreen() {
     const router = useRouter();

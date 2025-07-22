@@ -2,6 +2,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { router, Slot } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { Provider as PaperProvider } from 'react-native-paper'; // ✅ thêm dòng này
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
@@ -18,19 +19,22 @@ export default function RootLayout() {
     if (ready && !token) {
       setTimeout(() => {
         router.replace('/auth/login');
-      }, 0); // tránh điều hướng quá sớm
+      }, 0);
     }
   }, [ready, token]);
 
   if (!ready) return null;
+
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-        <View style={styles.container}>
-          <Slot />
-        </View>
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <PaperProvider>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+          <View style={styles.container}>
+            <Slot />
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </PaperProvider>
   );
 }
 

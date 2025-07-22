@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Props = {
-    text: string;
+    text: React.ReactNode;
     rightElement?: React.ReactNode;
 };
 

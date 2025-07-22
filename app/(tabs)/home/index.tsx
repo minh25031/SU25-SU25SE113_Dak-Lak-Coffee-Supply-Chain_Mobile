@@ -11,7 +11,6 @@ import { useAuthStore } from '@/stores/authStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 
 
-// Dashboard menu config
 const dashboardItems = [
     { title: 'Mùa vụ của tôi', icon: 'file-document', route: '/cropseason' },
     { title: 'Mùa vụ cà phê', icon: 'sprout', route: '/season' },
