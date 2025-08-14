@@ -19,6 +19,7 @@ const dashboardItems = [
     { title: 'Quản lý mẻ sơ chế', icon: 'beaker', route: '/processing' },
     { title: 'Phế phẩm sơ chế', icon: 'recycle', route: '/processing/waste' },
     { title: 'Gửi yêu cầu giao hàng', icon: 'truck-delivery', route: '/delivery/request' },
+    { title: 'Yêu cầu nhập kho', icon: 'warehouse', route: '/warehouse' },
     { title: 'Phản hồi từ chuyên gia', icon: 'chat-question', route: '/expert-reply' },
     { title: 'Trung tâm hỗ trợ', icon: 'lifebuoy', route: '/support' },
 ];
