@@ -17,7 +17,7 @@ import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Logo from '../../components/Logo';
 import TextInput from '../../components/TextInput';
-import { loginFarmer } from '../../core/api/auth.api';
+import { login } from '../../core/api/auth.api';
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -42,19 +42,25 @@ export default function LoginScreen() {
         if (!validate()) return;
         setLoading(true);
         try {
-            const token = await loginFarmer(email.value, password.value);
+            const token = await login(email.value, password.value);
             await useAuthStore.getState().setToken(token);
 
             const user = useAuthStore.getState().user;
-            if (user?.role !== 'Farmer') {
+            
+            // Kiểm tra role và điều hướng phù hợp
+            if (user?.role === 'Farmer') {
+                setTimeout(() => {
+                    router.replace('/(tabs)/home');
+                }, 0);
+            } else if (user?.role === 'DeliveryStaff') {
+                setTimeout(() => {
+                    router.replace('/delivery' as any);
+                }, 0);
+            } else {
                 await useAuthStore.getState().logout();
-                Alert.alert('Không hợp lệ', 'Chỉ tài khoản Farmer mới được truy cập.');
+                Alert.alert('Không hợp lệ', 'Chỉ tài khoản Farmer hoặc Delivery Staff mới được truy cập.');
                 return;
             }
-
-            setTimeout(() => {
-                router.replace('/(tabs)/home');
-            }, 0);
         } catch (error) {
             console.error('Login failed:', error);
             Alert.alert('Đăng nhập thất bại', 'Email hoặc mật khẩu không đúng');
@@ -74,7 +80,7 @@ export default function LoginScreen() {
             >
                 <Background>
                     <Logo />
-                    <Header text="Đăng nhập Farmer" />
+                    <Header text="Đăng nhập" />
 
                     <TextInput
                         label="Email"
