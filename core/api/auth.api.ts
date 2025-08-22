@@ -18,7 +18,7 @@ export async function loginDeliveryStaff(email: string, password: string): Promi
 }
 
 // Function chung cho login
-export async function login(email: string, password: string): Promise<string> {
+export async function login(email: string, password: string): Promise<any> {
   try {
     console.log('🔐 Attempting login with email:', email);
     const response = await api.post('/Auth/login', {
@@ -32,6 +32,27 @@ export async function login(email: string, password: string): Promise<string> {
     console.error('❌ Login error:', error);
     console.error('❌ Login error response:', error.response?.data);
     console.error('❌ Login error status:', error.response?.status);
+    throw error;
+  }
+}
+
+// Function đăng ký
+export async function register(fullName: string, email: string, password: string, phone: string): Promise<any> {
+  try {
+    console.log('🔐 Attempting registration with email:', email);
+    const response = await api.post('/Auth/register', {
+      fullName,
+      email,
+      password,
+      phone,
+    });
+    
+    console.log('✅ Registration response:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Registration error:', error);
+    console.error('❌ Registration error response:', error.response?.data);
+    console.error('❌ Registration error status:', error.response?.status);
     throw error;
   }
 }

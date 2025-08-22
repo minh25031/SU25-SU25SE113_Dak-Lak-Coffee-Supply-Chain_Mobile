@@ -1,50 +1,81 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import React from 'react';
+import { StyleSheet, Text } from 'react-native';
 
-// Hàm tiện lợi để tạo icon
-const createTabIcon = (iconName: keyof typeof MaterialCommunityIcons.glyphMap) => ({ color, size }: { color: string; size: number }) => (
-    <MaterialCommunityIcons name={iconName} color={color} size={size} />
-);
-
-export default function TabsLayout() {
+export default function TabLayout() {
     return (
         <Tabs
             screenOptions={{
                 headerShown: false,
+                tabBarStyle: styles.tabBar,
                 tabBarActiveTintColor: '#FD7622',
-                tabBarInactiveTintColor: '#888',
-                tabBarLabelStyle: { fontSize: 13 },
-                tabBarStyle: {
-                    paddingBottom: 4,
-                    height: 60,
-                    borderTopWidth: 0.5,
-                    borderTopColor: '#ddd',
-                    backgroundColor: '#fff',
-                },
+                tabBarInactiveTintColor: '#9CA3AF',
+                tabBarLabelStyle: styles.tabLabel,
+                tabBarIconStyle: styles.tabIcon,
             }}
         >
             <Tabs.Screen
-                name="home/index"
+                name="index"
                 options={{
                     title: 'Trang chủ',
-                    tabBarIcon: createTabIcon('home'),
+                    tabBarIcon: ({ color, size }) => (
+                        <Text style={[styles.tabIconText, { color, fontSize: size }]}>🏠</Text>
+                    ),
                 }}
             />
             <Tabs.Screen
-                name="support/index"
+                name="cropseason"
                 options={{
-                    title: 'Hỗ trợ',
-                    tabBarIcon: createTabIcon('lifebuoy'),
+                    title: 'Mùa vụ',
+                    tabBarIcon: ({ color, size }) => (
+                        <Text style={[styles.tabIconText, { color, fontSize: size }]}>🌱</Text>
+                    ),
                 }}
             />
             <Tabs.Screen
-                name="profile/index"
+                name="warehouse"
                 options={{
-                    title: 'Tài khoản',
-                    tabBarIcon: createTabIcon('account-circle'),
+                    title: 'Kho hàng',
+                    tabBarIcon: ({ color, size }) => (
+                        <Text style={[styles.tabIconText, { color, fontSize: size }]}>🏭</Text>
+                    ),
+                }}
+            />
+            <Tabs.Screen
+                name="profile"
+                options={{
+                    title: 'Cá nhân',
+                    tabBarIcon: ({ color, size }) => (
+                        <Text style={[styles.tabIconText, { color, fontSize: size }]}>👤</Text>
+                    ),
                 }}
             />
         </Tabs>
     );
 }
+
+const styles = StyleSheet.create({
+    tabBar: {
+        backgroundColor: '#FFFFFF',
+        borderTopWidth: 1,
+        borderTopColor: '#E5E7EB',
+        paddingTop: 8,
+        paddingBottom: 8,
+        height: 80,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 8,
+    },
+    tabLabel: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginTop: 4,
+    },
+    tabIcon: {
+        marginTop: 4,
+    },
+    tabIconText: {
+        textAlign: 'center',
+    },
+});

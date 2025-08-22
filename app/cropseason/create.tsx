@@ -1,14 +1,13 @@
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
     Pressable,
     StyleSheet,
     Text,
     TextInput,
-    View,
+    View
 } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -20,16 +19,37 @@ import { getAvailableCommitments, type FarmingCommitmentItem } from '@/core/api/
 
 type DropdownItem = { label: string; value: string };
 
+const formatDate = (date: Date): string => {
+    return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}/${date.getFullYear()}`;
+};
+
+const toInputDate = (date: Date): string =>
+    `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate()
+        .toString()
+        .padStart(2, '0')}`;
+
+const getSeasonLabelByMonth = (month: number): string => {
+    if (month >= 1 && month <= 3) return 'Xuân';
+    if (month >= 4 && month <= 6) return 'Hạ';
+    if (month >= 7 && month <= 9) return 'Thu';
+    return 'Đông';
+};
+
 export default function CreateCropSeasonScreen() {
     const router = useRouter();
 
     const [form, setForm] = useState({
         seasonName: '',
-        startDate: '',
-        endDate: '',
+        startDate: null as Date | null,
+        endDate: null as Date | null,
         note: '',
         commitmentId: '',
     });
+
+    const [showStartPicker, setShowStartPicker] = useState(false);
+    const [showEndPicker, setShowEndPicker] = useState(false);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoadingCommitments, setIsLoadingCommitments] = useState(true);
@@ -42,16 +62,6 @@ export default function CreateCropSeasonScreen() {
     const showSnackbar = (msg: string) => {
         setSnackbarMessage(msg);
         setSnackbarVisible(true);
-    };
-
-    const parseDateInput = (input: string): string => {
-        const [day, month, year] = input.split('/');
-        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    };
-
-    const parseDate = (input: string): Date => {
-        const [day, month, year] = input.split('/');
-        return new Date(`${year}-${month}-${day}`);
     };
 
     useEffect(() => {
@@ -75,19 +85,11 @@ export default function CreateCropSeasonScreen() {
 
     useEffect(() => {
         if (!form.startDate) return;
-
-        const [day, month, year] = form.startDate.split('/');
-        if (!year) return;
-
-        const suggestedName = `Mùa vụ ${year}`;
-        const shouldSuggest =
-            form.seasonName.trim() === '' || form.seasonName.startsWith('Mùa vụ');
-
-        if (shouldSuggest && form.seasonName !== suggestedName) {
-            setForm((prev) => ({
-                ...prev,
-                seasonName: suggestedName,
-            }));
+        const month = form.startDate.getMonth() + 1;
+        const year = form.startDate.getFullYear();
+        const label = `Mùa vụ ${getSeasonLabelByMonth(month)} ${year}`;
+        if (form.seasonName.trim() === '' || form.seasonName.startsWith('Mùa vụ')) {
+            setForm((prev) => ({ ...prev, seasonName: label }));
         }
     }, [form.startDate]);
 
@@ -99,7 +101,7 @@ export default function CreateCropSeasonScreen() {
             return;
         }
 
-        if (parseDate(startDate) >= parseDate(endDate)) {
+        if (startDate >= endDate) {
             showSnackbar('Ngày bắt đầu phải trước ngày kết thúc.');
             return;
         }
@@ -107,9 +109,11 @@ export default function CreateCropSeasonScreen() {
         setIsSubmitting(true);
         try {
             await createCropSeason({
-                ...form,
-                startDate: parseDateInput(form.startDate),
-                endDate: parseDateInput(form.endDate),
+                seasonName,
+                note: form.note,
+                commitmentId,
+                startDate: toInputDate(startDate),
+                endDate: toInputDate(endDate),
             });
 
             showSnackbar('Tạo mùa vụ thành công!');
@@ -122,92 +126,99 @@ export default function CreateCropSeasonScreen() {
     };
 
     return (
-        <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-            <KeyboardAwareScrollView
-                contentContainerStyle={styles.container}
-                keyboardShouldPersistTaps="handled"
+        <KeyboardAwareScrollView contentContainerStyle={styles.container}>
+            <BackButton goBack={() => router.back()} />
+            <Text style={styles.title}>Tạo mùa vụ mới</Text>
+
+            <Text style={styles.label}>Tên mùa vụ *</Text>
+            <TextInput
+                style={styles.input}
+                value={form.seasonName}
+                onChangeText={(text) => setForm({ ...form, seasonName: text })}
+                placeholder="Nhập tên mùa vụ"
+            />
+
+            <Text style={styles.label}>Ngày bắt đầu *</Text>
+            <Pressable onPress={() => setShowStartPicker(true)} style={styles.datePicker}>
+                <Text style={styles.dateText}>
+                    {form.startDate ? formatDate(form.startDate) : 'Chọn ngày bắt đầu'}
+                </Text>
+            </Pressable>
+            {showStartPicker && (
+                <DateTimePicker
+                    value={form.startDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(_, date) => {
+                        setShowStartPicker(false);
+                        if (date) setForm((prev) => ({ ...prev, startDate: date }));
+                    }}
+                />
+            )}
+
+            <Text style={styles.label}>Ngày kết thúc *</Text>
+            <Pressable onPress={() => setShowEndPicker(true)} style={styles.datePicker}>
+                <Text style={styles.dateText}>
+                    {form.endDate ? formatDate(form.endDate) : 'Chọn ngày kết thúc'}
+                </Text>
+            </Pressable>
+            {showEndPicker && (
+                <DateTimePicker
+                    value={form.endDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(_, date) => {
+                        setShowEndPicker(false);
+                        if (date) setForm((prev) => ({ ...prev, endDate: date }));
+                    }}
+                />
+            )}
+
+            <Text style={styles.label}>Ghi chú</Text>
+            <TextInput
+                style={[styles.input, { height: 80 }]}
+                value={form.note}
+                onChangeText={(text) => setForm({ ...form, note: text })}
+                placeholder="Thêm ghi chú (nếu có)"
+                multiline
+            />
+
+            <Text style={styles.label}>Chọn cam kết *</Text>
+            <View style={styles.dropdownWrapper}>
+                {isLoadingCommitments ? (
+                    <ActivityIndicator color="#FD7622" />
+                ) : (
+                    <DropDownPicker
+                        open={commitmentOpen}
+                        value={form.commitmentId || null}
+                        items={commitmentItems}
+                        setOpen={setCommitmentOpen}
+                        setItems={setCommitmentItems}
+                        setValue={(callback) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                commitmentId:
+                                    typeof callback === 'function' ? callback(prev.commitmentId) : callback,
+                            }))
+                        }
+                        placeholder="Chọn cam kết"
+                        style={styles.dropdown}
+                        dropDownContainerStyle={{ borderColor: '#D1D5DB' }}
+                        listMode="SCROLLVIEW"
+                        zIndex={1000}
+                    />
+                )}
+            </View>
+
+            <Pressable
+                style={[styles.button, isSubmitting && { opacity: 0.6 }]}
+                onPress={handleSubmit}
+                disabled={isSubmitting}
             >
-                <BackButton goBack={() => router.back()} />
-                <Text style={styles.title}>Tạo mùa vụ mới</Text>
-
-                <Text style={styles.label}>Tên mùa vụ *</Text>
-                <TextInput
-                    style={styles.input}
-                    value={form.seasonName}
-                    onChangeText={(text) => setForm({ ...form, seasonName: text })}
-                    placeholder="Nhập tên mùa vụ"
-                />
-
-
-                <Text style={styles.label}>Ngày bắt đầu *</Text>
-                <TextInput
-                    style={styles.input}
-                    value={form.startDate}
-                    onChangeText={(text) => setForm({ ...form, startDate: text })}
-                    placeholder="DD/MM/YYYY"
-                />
-
-                <Text style={styles.label}>Ngày kết thúc *</Text>
-                <TextInput
-                    style={styles.input}
-                    value={form.endDate}
-                    onChangeText={(text) => setForm({ ...form, endDate: text })}
-                    placeholder="DD/MM/YYYY"
-                />
-
-                <Text style={styles.label}>Ghi chú</Text>
-                <TextInput
-                    style={[styles.input, { height: 80 }]}
-                    value={form.note}
-                    onChangeText={(text) => setForm({ ...form, note: text })}
-                    placeholder="Thêm ghi chú (nếu có)"
-                    multiline
-                />
-
-                <Text style={styles.label}>Chọn cam kết *</Text>
-                <View style={styles.dropdownWrapper}>
-                    {isLoadingCommitments ? (
-                        <ActivityIndicator color="#FD7622" />
-                    ) : (
-                        <DropDownPicker
-                            open={commitmentOpen}
-                            value={form.commitmentId || null}
-                            items={commitmentItems}
-                            setOpen={setCommitmentOpen}
-                            setItems={setCommitmentItems}
-                            setValue={(callback) =>
-                                setForm((prev) => {
-                                    const newValue =
-                                        typeof callback === 'function' ? callback(prev.commitmentId) : callback;
-                                    if (newValue === prev.commitmentId) return prev;
-                                    return {
-                                        ...prev,
-                                        commitmentId: newValue,
-                                    };
-                                })
-                            }
-                            placeholder="Chọn cam kết"
-                            style={styles.dropdown}
-                            dropDownContainerStyle={{ borderColor: '#D1D5DB' }}
-                            listMode="SCROLLVIEW"
-                            zIndex={1000}
-                        />
-                    )}
-                </View>
-
-                <Pressable
-                    style={[styles.button, isSubmitting && { opacity: 0.6 }]}
-                    onPress={handleSubmit}
-                    disabled={isSubmitting}
-                >
-                    <Text style={styles.buttonText}>
-                        {isSubmitting ? 'Đang tạo...' : 'Tạo mùa vụ'}
-                    </Text>
-                </Pressable>
-            </KeyboardAwareScrollView>
+                <Text style={styles.buttonText}>
+                    {isSubmitting ? 'Đang tạo...' : 'Tạo mùa vụ'}
+                </Text>
+            </Pressable>
 
             <Snackbar
                 visible={snackbarVisible}
@@ -220,7 +231,7 @@ export default function CreateCropSeasonScreen() {
             >
                 {snackbarMessage}
             </Snackbar>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
     );
 }
 
@@ -234,7 +245,7 @@ const styles = StyleSheet.create({
         fontSize: 22,
         fontWeight: 'bold',
         color: '#D74F0F',
-        marginBottom: 16,
+        marginBottom: 20,
     },
     label: {
         fontWeight: '600',
@@ -247,12 +258,23 @@ const styles = StyleSheet.create({
         borderColor: '#D1D5DB',
         borderRadius: 8,
         padding: 10,
-        marginBottom: 12,
+        marginBottom: 14,
         backgroundColor: '#fff',
+    },
+    datePicker: {
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 14,
+        backgroundColor: '#fff',
+    },
+    dateText: {
+        color: '#1F2937',
     },
     dropdownWrapper: {
         zIndex: 1000,
-        marginBottom: 16,
+        marginBottom: 20,
     },
     dropdown: {
         borderColor: '#D1D5DB',
@@ -262,7 +284,7 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         borderRadius: 999,
         alignItems: 'center',
-        marginTop: 12,
+        marginTop: 10,
     },
     buttonText: {
         color: '#fff',

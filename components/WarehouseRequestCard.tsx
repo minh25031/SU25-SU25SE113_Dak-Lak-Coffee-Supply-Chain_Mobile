@@ -12,9 +12,7 @@ interface Props {
 }
 
 export default function WarehouseRequestCard({ request, onPress }: Props) {
-  console.log('📋 WarehouseRequestCard - request data:', request);
-  console.log('📋 Status:', request.status);
-  
+
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), 'dd/MM/yyyy');

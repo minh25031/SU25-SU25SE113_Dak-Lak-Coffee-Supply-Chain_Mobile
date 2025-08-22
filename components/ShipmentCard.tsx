@@ -70,7 +70,6 @@ const getStatusText = (status: string) => {
 export default function ShipmentCard({ shipment, onPress }: ShipmentCardProps) {
   // Null check để tránh crash
   if (!shipment) {
-    console.warn('⚠️ ShipmentCard: shipment prop is null or undefined');
     return null;
   }
 
@@ -87,8 +86,8 @@ export default function ShipmentCard({ shipment, onPress }: ShipmentCardProps) {
   };
 
   return (
-    <TouchableOpacity 
-      style={styles.card} 
+    <TouchableOpacity
+      style={styles.card}
       onPress={() => onPress(shipment)}
       activeOpacity={0.7}
     >
@@ -99,10 +98,10 @@ export default function ShipmentCard({ shipment, onPress }: ShipmentCardProps) {
           <Text style={styles.orderCode}>Đơn hàng: {shipment.orderCode}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-          <MaterialCommunityIcons 
-            name={statusIcon as any} 
-            size={16} 
-            color={statusColor} 
+          <MaterialCommunityIcons
+            name={statusIcon as any}
+            size={16}
+            color={statusColor}
           />
           <Text style={[styles.statusText, { color: statusColor }]}>
             {statusText}

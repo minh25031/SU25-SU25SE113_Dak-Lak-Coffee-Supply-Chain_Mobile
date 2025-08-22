@@ -32,40 +32,40 @@ export default function WarehouseRequestDetailScreen() {
       const data = await getWarehouseInboundRequestById(id);
       console.log('📋 Detail data received:', data);
       setRequest(data);
-      
-             // Lấy thông tin batch nếu có batchId
-       if (data?.batchId) {
-         console.log('📋 Loading batch info for batchId:', data.batchId);
-         console.log('📋 Request data keys:', Object.keys(data));
-         console.log('📋 Full request data:', JSON.stringify(data, null, 2));
-         
-         const batches = await getProcessingBatchesForFarmer();
-         console.log('📋 All batches fetched:', batches);
-         console.log('📋 Number of batches:', batches.length);
-         
-         // Log tất cả batchId để debug
-         batches.forEach((batch, index) => {
-           console.log(`📋 Batch ${index}:`, {
-             batchId: batch.batchId,
-             batchCode: batch.batchCode,
-             totalOutputQuantity: batch.totalOutputQuantity,
-             status: batch.status
-           });
-         });
-         
-         const batch = batches.find(b => b.batchId === data.batchId);
-         console.log('📋 Batch info found:', batch);
-         
-         if (!batch) {
-           console.log('❌ No matching batch found for batchId:', data.batchId);
-           console.log('❌ Available batchIds:', batches.map(b => b.batchId));
-         }
-         
-         setBatchInfo(batch);
-       } else {
-         console.log('📋 No batchId found in request data');
-         console.log('📋 Available fields in request data:', Object.keys(data || {}));
-       }
+
+      // Lấy thông tin batch nếu có batchId
+      if (data?.batchId) {
+        console.log('📋 Loading batch info for batchId:', data.batchId);
+        console.log('📋 Request data keys:', Object.keys(data));
+        console.log('📋 Full request data:', JSON.stringify(data, null, 2));
+
+        const batches = await getProcessingBatchesForFarmer();
+        console.log('📋 All batches fetched:', batches);
+        console.log('📋 Number of batches:', batches.length);
+
+        // Log tất cả batchId để debug
+        batches.forEach((batch, index) => {
+          console.log(`📋 Batch ${index}:`, {
+            batchId: batch.batchId,
+            batchCode: batch.batchCode,
+            totalOutputQuantity: batch.totalOutputQuantity,
+            status: batch.status
+          });
+        });
+
+        const batch = batches.find(b => b.batchId === data.batchId);
+        console.log('📋 Batch info found:', batch);
+
+        if (!batch) {
+          console.log('❌ No matching batch found for batchId:', data.batchId);
+          console.log('❌ Available batchIds:', batches.map(b => b.batchId));
+        }
+
+        setBatchInfo(batch);
+      } else {
+        console.log('📋 No batchId found in request data');
+        console.log('📋 Available fields in request data:', Object.keys(data || {}));
+      }
     } catch (error) {
       console.error('❌ Lỗi tải chi tiết yêu cầu:', error);
       Alert.alert('Lỗi', 'Không thể tải thông tin yêu cầu');
@@ -80,7 +80,7 @@ export default function WarehouseRequestDetailScreen() {
     // Sử dụng inboundRequestId thay vì id
     const requestId = request.inboundRequestId || request.id;
     console.log('🔍 Cancelling request with ID:', requestId);
-    
+
     if (!requestId) {
       Alert.alert('Lỗi', 'Không tìm thấy ID yêu cầu để hủy');
       return;
@@ -162,96 +162,96 @@ export default function WarehouseRequestDetailScreen() {
   return (
     <Background>
       <Header title="Chi tiết yêu cầu" showBack />
-      
+
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         <Card style={styles.card}>
           <Card.Content>
-                         <View style={styles.header}>
-               <View style={styles.coffeeInfo}>
-                 <MaterialCommunityIcons name="package-variant" size={24} color="#FD7622" />
-                 <View>
-                   <Text style={styles.coffeeName}>
-                     {request.coffeeType || batchInfo?.typeName || batchInfo?.batchCode || request.batchName || request.batchId || 'Không có tên mẻ'}
-                   </Text>
-                   {request.requestCode && (
-                     <Text style={styles.requestCode}>Mã: {request.requestCode}</Text>
-                   )}
-                 </View>
-               </View>
-               <Chip
-                 style={[styles.statusChip, { backgroundColor: getWarehouseInboundRequestStatusColor(request.status) }]}
-                 textStyle={styles.statusChipText}
-               >
-                 {getWarehouseInboundRequestStatusLabel(request.status)}
-               </Chip>
-             </View>
+            <View style={styles.header}>
+              <View style={styles.coffeeInfo}>
+                <MaterialCommunityIcons name="package-variant" size={24} color="#FD7622" />
+                <View>
+                  <Text style={styles.coffeeName}>
+                    {request.coffeeType || batchInfo?.typeName || batchInfo?.batchCode || request.batchName || request.batchId || 'Không có tên mẻ'}
+                  </Text>
+                  {request.requestCode && (
+                    <Text style={styles.requestCode}>Mã: {request.requestCode}</Text>
+                  )}
+                </View>
+              </View>
+              <Chip
+                style={[styles.statusChip, { backgroundColor: getWarehouseInboundRequestStatusColor(request.status) }]}
+                textStyle={styles.statusChipText}
+              >
+                {getWarehouseInboundRequestStatusLabel(request.status)}
+              </Chip>
+            </View>
           </Card.Content>
         </Card>
 
         <Card style={styles.card}>
           <Card.Content>
             <Text style={styles.sectionTitle}>Thông tin yêu cầu</Text>
-            
+
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="scale" size={20} color="#6B7280" />
               <Text style={styles.infoLabel}>Số lượng:</Text>
               <Text style={styles.infoValue}>{request.requestedQuantity} kg</Text>
             </View>
 
-                         <View style={styles.infoRow}>
-               <MaterialCommunityIcons name="account" size={20} color="#6B7280" />
-               <Text style={styles.infoLabel}>Nông dân:</Text>
-               <Text style={styles.infoValue}>{request.farmerName || batchInfo?.farmerName || 'N/A'}</Text>
-             </View>
+            <View style={styles.infoRow}>
+              <MaterialCommunityIcons name="account" size={20} color="#6B7280" />
+              <Text style={styles.infoLabel}>Nông dân:</Text>
+              <Text style={styles.infoValue}>{request.farmerName || batchInfo?.farmerName || 'N/A'}</Text>
+            </View>
 
-                         {/* Batch Information - từ API response */}
-             {request.batchCode && (
-               <View style={styles.infoRow}>
-                 <MaterialCommunityIcons name="barcode" size={20} color="#6B7280" />
-                 <Text style={styles.infoLabel}>Mã lô:</Text>
-                 <Text style={styles.infoValue}>{request.batchCode}</Text>
-               </View>
-             )}
-             
-             {request.coffeeType && (
-               <View style={styles.infoRow}>
-                 <MaterialCommunityIcons name="coffee" size={20} color="#6B7280" />
-                 <Text style={styles.infoLabel}>Loại cà phê:</Text>
-                 <Text style={styles.infoValue}>{request.coffeeType}</Text>
-               </View>
-             )}
-             
-             {request.seasonCode && (
-               <View style={styles.infoRow}>
-                 <MaterialCommunityIcons name="leaf" size={20} color="#6B7280" />
-                 <Text style={styles.infoLabel}>Mùa vụ:</Text>
-                 <Text style={styles.infoValue}>{request.seasonCode}</Text>
-               </View>
-             )}
-             
-             {/* Batch Information - từ ProcessingBatch nếu có */}
-             {batchInfo && (
-               <>
-                 <View style={styles.infoRow}>
-                   <MaterialCommunityIcons name="scale" size={20} color="#6B7280" />
-                   <Text style={styles.infoLabel}>Số lượng đã xử lý:</Text>
-                   <Text style={styles.infoValue}>{batchInfo.totalOutputQuantity || batchInfo.totalInputQuantity || 0} kg</Text>
-                 </View>
-                 
-                 <View style={styles.infoRow}>
-                   <MaterialCommunityIcons name="calculator" size={20} color="#6B7280" />
-                   <Text style={styles.infoLabel}>Còn lại có thể gửi:</Text>
-                   <Text style={styles.infoValue}>{Math.max(0, ((batchInfo.totalOutputQuantity || batchInfo.totalInputQuantity || 0)) - request.requestedQuantity)} kg</Text>
-                 </View>
-                 
-                 <View style={styles.infoRow}>
-                   <MaterialCommunityIcons name="information" size={20} color="#6B7280" />
-                   <Text style={styles.infoLabel}>Ghi chú:</Text>
-                   <Text style={styles.infoValue}>Số lượng đã xử lý = 0 vì batch chưa có progress</Text>
-                 </View>
-               </>
-             )}
-             
+            {/* Batch Information - từ API response */}
+            {request.batchCode && (
+              <View style={styles.infoRow}>
+                <MaterialCommunityIcons name="barcode" size={20} color="#6B7280" />
+                <Text style={styles.infoLabel}>Mã lô:</Text>
+                <Text style={styles.infoValue}>{request.batchCode}</Text>
+              </View>
+            )}
+
+            {request.coffeeType && (
+              <View style={styles.infoRow}>
+                <MaterialCommunityIcons name="coffee" size={20} color="#6B7280" />
+                <Text style={styles.infoLabel}>Loại cà phê:</Text>
+                <Text style={styles.infoValue}>{request.coffeeType}</Text>
+              </View>
+            )}
+
+            {request.seasonCode && (
+              <View style={styles.infoRow}>
+                <MaterialCommunityIcons name="leaf" size={20} color="#6B7280" />
+                <Text style={styles.infoLabel}>Mùa vụ:</Text>
+                <Text style={styles.infoValue}>{request.seasonCode}</Text>
+              </View>
+            )}
+
+            {/* Batch Information - từ ProcessingBatch nếu có */}
+            {batchInfo && (
+              <>
+                <View style={styles.infoRow}>
+                  <MaterialCommunityIcons name="scale" size={20} color="#6B7280" />
+                  <Text style={styles.infoLabel}>Số lượng đã xử lý:</Text>
+                  <Text style={styles.infoValue}>{batchInfo.totalOutputQuantity || batchInfo.totalInputQuantity || 0} kg</Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <MaterialCommunityIcons name="calculator" size={20} color="#6B7280" />
+                  <Text style={styles.infoLabel}>Còn lại có thể gửi:</Text>
+                  <Text style={styles.infoValue}>{Math.max(0, ((batchInfo.totalOutputQuantity || batchInfo.totalInputQuantity || 0)) - request.requestedQuantity)} kg</Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <MaterialCommunityIcons name="information" size={20} color="#6B7280" />
+                  <Text style={styles.infoLabel}>Ghi chú:</Text>
+                  <Text style={styles.infoValue}>Số lượng đã xử lý = 0 vì batch chưa có progress</Text>
+                </View>
+              </>
+            )}
+
 
 
             {request.businessStaffName && (
@@ -267,20 +267,20 @@ export default function WarehouseRequestDetailScreen() {
         <Card style={styles.card}>
           <Card.Content>
             <Text style={styles.sectionTitle}>Thông tin thời gian</Text>
-            
-                         <View style={styles.infoRow}>
-               <MaterialCommunityIcons name="truck-delivery" size={20} color="#6B7280" />
-               <Text style={styles.infoLabel}>Ngày giao dự kiến:</Text>
-               <Text style={styles.infoValue}>{formatDate(request.preferredDeliveryDate)}</Text>
-             </View>
-             
-             {request.actualDeliveryDate && (
-               <View style={styles.infoRow}>
-                 <MaterialCommunityIcons name="check-circle" size={20} color="#6B7280" />
-                 <Text style={styles.infoLabel}>Ngày giao thực tế:</Text>
-                 <Text style={styles.infoValue}>{formatDate(request.actualDeliveryDate)}</Text>
-               </View>
-             )}
+
+            <View style={styles.infoRow}>
+              <MaterialCommunityIcons name="truck-delivery" size={20} color="#6B7280" />
+              <Text style={styles.infoLabel}>Ngày giao dự kiến:</Text>
+              <Text style={styles.infoValue}>{formatDate(request.preferredDeliveryDate)}</Text>
+            </View>
+
+            {request.actualDeliveryDate && (
+              <View style={styles.infoRow}>
+                <MaterialCommunityIcons name="check-circle" size={20} color="#6B7280" />
+                <Text style={styles.infoLabel}>Ngày giao thực tế:</Text>
+                <Text style={styles.infoValue}>{formatDate(request.actualDeliveryDate)}</Text>
+              </View>
+            )}
 
             <View style={styles.infoRow}>
               <MaterialCommunityIcons name="clock-outline" size={20} color="#6B7280" />
@@ -342,7 +342,7 @@ export default function WarehouseRequestDetailScreen() {
           >
             Quay lại
           </Button>
-          
+
           {canCancel && (
             <Button
               mode="outlined"
@@ -357,13 +357,13 @@ export default function WarehouseRequestDetailScreen() {
               Hủy yêu cầu
             </Button>
           )}
-          
+
 
         </View>
-        
+
         {/* Debug info */}
         <View style={styles.debugInfo}>
-          <Text style={styles.debugText}>Debug: Status = "{request.status}" | CanCancel = {canCancel.toString()}</Text>
+          <Text style={styles.debugText}>Debug: Status = &quot;{request.status}&quot; | CanCancel = {canCancel.toString()}</Text>
         </View>
       </ScrollView>
     </Background>

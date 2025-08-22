@@ -5,14 +5,31 @@ export enum WarehouseInboundRequestStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export function getStatusLabel(status: string): string {
+  switch (status) {
+    case 'Pending':
+      return 'Chờ xử lý';
+    case 'Approved':
+      return 'Đã duyệt';
+    case 'Rejected':
+      return 'Từ chối';
+    case 'Completed':
+      return 'Hoàn thành';
+    case 'Cancelled':
+      return 'Đã hủy';
+    default:
+      return 'Không xác định';
+  }
+}
+
 export const getWarehouseInboundRequestStatusLabel = (status: string | number): string => {
   // Convert to string for comparison
   const statusStr = String(status).toUpperCase();
-
+  
   switch (statusStr) {
     case 'PENDING':
     case '0':
-      return 'Chờ duyệt';
+      return 'Chờ xử lý';
     case 'APPROVED':
     case '1':
       return 'Đã duyệt';
@@ -26,8 +43,7 @@ export const getWarehouseInboundRequestStatusLabel = (status: string | number): 
     case '4':
       return 'Hoàn thành';
     default:
-      console.log('⚠️ Unknown status:', status, 'type:', typeof status);
-      return 'Chờ duyệt'; // Default to pending
+      return 'Chờ xử lý';
   }
 };
 
