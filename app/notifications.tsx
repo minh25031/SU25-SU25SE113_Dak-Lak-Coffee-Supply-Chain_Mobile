@@ -1,6 +1,5 @@
 import BackButton from '@/components/BackButton';
 import { useNotificationStore } from '@/stores/notificationStore';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,21 +8,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const notifications = [
     {
         id: 1,
-        icon: 'bell-ring',
+        icon: '🔔',
         title: 'Giá cà phê tăng 5%',
         time: '10 phút trước',
         description: 'Giá Robusta hôm nay tăng nhẹ theo thị trường thế giới.',
     },
     {
         id: 2,
-        icon: 'calendar-alert',
+        icon: '📅',
         title: 'Tập huấn kỹ thuật phơi',
         time: '1 giờ trước',
         description: 'Lịch tập huấn sơ chế phơi tĩnh sẽ diễn ra vào ngày 10/06.',
     },
     {
         id: 3,
-        icon: 'chat-question',
+        icon: '💬',
         title: 'Phản hồi từ chuyên gia',
         time: 'Hôm qua',
         description: 'Chuyên gia đã phản hồi về sự cố sâu bệnh.',
@@ -45,12 +44,9 @@ export default function NotificationsScreen() {
             <ScrollView>
                 {notifications.map((item) => (
                     <View key={item.id} style={styles.card}>
-                        <MaterialCommunityIcons
-                            name={item.icon as any}
-                            size={28}
-                            color="#4B5563"
-                            style={{ marginRight: 12 }}
-                        />
+                        <View style={styles.iconContainer}>
+                            <Text style={styles.iconText}>{item.icon}</Text>
+                        </View>
                         <View style={{ flex: 1 }}>
                             <Text style={styles.cardTitle}>{item.title}</Text>
                             <Text style={styles.cardDesc}>{item.description}</Text>
@@ -81,6 +77,18 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 12,
         alignItems: 'center',
+    },
+    iconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#E5E7EB',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    iconText: {
+        fontSize: 20,
     },
     cardTitle: {
         fontWeight: 'bold',

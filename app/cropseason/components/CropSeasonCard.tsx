@@ -1,5 +1,5 @@
 import { getStatusLabel } from "@/core/utils/getStatusLabel";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+// import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -44,7 +44,7 @@ const CropSeasonCard: React.FC<CropSeasonCardProps> = ({
             <Text style={styles.info}>Diện tích: {area} ha</Text>
 
             <View style={styles.row}>
-                <MaterialCommunityIcons name="account" size={16} color="#6F4E37" />
+                <Text style={{ fontSize: 16, color: "#6F4E37" }}>👤</Text>
                 <Text style={styles.farmer}>{farmerName}</Text>
             </View>
 

@@ -1,6 +1,6 @@
 // CropSeasonDetailItem.tsx
 import { getCropSeasonDetailStatusColor, getCropSeasonDetailStatusLabel } from "@/core/enums/cropSeasonDetailStatus";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+// import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -40,33 +40,33 @@ const CropSeasonDetailItem: React.FC<CropSeasonDetailItemProps> = ({
             </Text>
 
             <View style={styles.detailRow}>
-                <MaterialCommunityIcons name="ruler-square" size={16} color="#3B82F6" />
+                <Text style={{ fontSize: 16, color: "#3B82F6" }}>📏</Text>
                 <Text style={styles.detailItem}>Diện tích: {areaAllocated} ha</Text>
             </View>
 
             <View style={styles.detailRow}>
-                <MaterialCommunityIcons name="calendar-range" size={16} color="#F59E0B" />
+                <Text style={{ fontSize: 16, color: "#F59E0B" }}>📅</Text>
                 <Text style={styles.detailItem}>
                     Thu hoạch: {formatDate(expectedHarvestStart)} → {formatDate(expectedHarvestEnd)}
                 </Text>
             </View>
 
             <View style={styles.detailRow}>
-                <MaterialCommunityIcons name="corn" size={16} color="#FD7622" />
+                <Text style={{ fontSize: 16, color: "#FD7622" }}>🌽</Text>
                 <Text style={styles.detailItem}>Năng suất ước tính: {estimatedYield} kg</Text>
             </View>
 
             <View style={styles.detailRow}>
-                <MaterialCommunityIcons name="medal" size={16} color="#8B5CF6" />
+                <Text style={{ fontSize: 16, color: "#8B5CF6" }}>🏆</Text>
                 <Text style={styles.detailItem}>Chất lượng dự kiến: {plannedQuality}</Text>
             </View>
 
             <View style={styles.detailRow}>
-                <MaterialCommunityIcons
-                    name="tag"
-                    size={16}
-                    color={getCropSeasonDetailStatusColor(status)}
-                />
+                <Text
+                    style={{ fontSize: 16, color: getCropSeasonDetailStatusColor(status) }}
+                >
+                    🏷️
+                </Text>
                 <Text
                     style={[
                         styles.detailItem,

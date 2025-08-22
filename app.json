@@ -1,11 +1,12 @@
 {
   "expo": {
-    "name": "FARMER APP",
-    "slug": "FARMER APP",
+    "name": "DakLak Coffee",
+    "slug": "daklak-coffee",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.jpg",
-    "scheme": "sepfarmerapp",
+    "scheme": "daklakcoffee",
+    "description": "Ứng dụng quản lý chuỗi cung ứng cà phê DakLak",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -33,8 +34,7 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ],
-      "expo-web-browser"
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -18,7 +18,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (ready && !token) {
       setTimeout(() => {
-        router.replace('/auth/login');
+        router.replace('/(auth)/login');
       }, 0);
     }
   }, [ready, token]);

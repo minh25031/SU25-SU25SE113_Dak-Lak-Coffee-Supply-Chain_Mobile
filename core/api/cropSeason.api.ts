@@ -1,7 +1,6 @@
 import api from './axiosClient';
 
 // ========== TYPES ==========
-
 export interface CropSeasonDetail {
   detailId: string;
   coffeeTypeId: string;
@@ -57,102 +56,139 @@ export interface CropSeasonUpdatePayload {
   status: number;
 }
 
-interface ServiceResult<T = any> {
+export interface ServiceResult<T = any> {
   code: number | string;
   message: string;
   data: T | null;
 }
 
-// ==================== API FUNCTIONS ====================
+// ========== API FUNCTIONS ==========
 
-// Lấy tất cả mùa vụ (dành cho Admin hoặc Manager)
-export async function getAllCropSeasons(): Promise<CropSeasonListItem[]> {
+// Lấy danh sách mùa vụ (cho Admin/Manager)
+export async function getAllCropSeasons(): Promise<ServiceResult<CropSeasonListItem[]>> {
   try {
-    const res = await api.get<CropSeasonListItem[]>("/CropSeasons");
-    return res.data;
+    console.log('🔍 Calling API: /CropSeasons');
+    const res = await api.get("/CropSeasons");
+    console.log('📡 Raw API Response:', res);
+    console.log('📡 Response status:', res.status);
+    console.log('📡 Response data:', res.data);
+    
+    // Kiểm tra cấu trúc response
+    if (res.data && res.data.data) {
+      // Nếu response có cấu trúc { data: [...], message: "...", status: ... }
+      return { code: 200, message: "Thành công", data: res.data.data };
+    } else if (res.data && Array.isArray(res.data)) {
+      // Nếu response trực tiếp là array
+      return { code: 200, message: "Thành công", data: res.data };
+    } else {
+      console.log('⚠️ Unexpected response structure:', res.data);
+      return { code: 200, message: "Thành công", data: [] };
+    }
   } catch (err) {
-    console.error("Lỗi getAllCropSeasons:", err);
-    return [];
+    console.error("getAllCropSeasons:", err);
+    return { code: 400, message: "Không thể tải danh sách mùa vụ", data: null };
   }
 }
 
-// Lấy mùa vụ theo userId (dành cho Farmer)
+// Lấy danh sách mùa vụ của user hiện tại (Farmer)
 export async function getCropSeasonsForCurrentUser(params?: {
   search?: string;
   status?: string;
   page?: number;
   pageSize?: number;
-}): Promise<CropSeasonListItem[]> {
+}): Promise<ServiceResult<CropSeasonListItem[]>> {
   try {
-    const res = await api.get<CropSeasonListItem[]>("/CropSeasons", {
-      params: {
-        search: params?.search,
-        status: params?.status,
-        page: params?.page ?? 1,
-        pageSize: params?.pageSize ?? 10,
-      },
-    });
-    return res.data;
+    // Thử endpoint chính trước
+    console.log('🔍 Calling API: /CropSeasons (for current user)');
+    try {
+      const res = await api.get("/CropSeasons", {
+        params: {
+          search: params?.search,
+          status: params?.status,
+          page: params?.page ?? 1,
+          pageSize: params?.pageSize ?? 10,
+          // Thêm tham số để lấy mùa vụ của farmer hiện tại
+          currentUser: true,
+        },
+      });
+      console.log('📡 Farmer API Response:', res);
+      
+      // Kiểm tra cấu trúc response
+      if (res.data && res.data.data) {
+        return { code: 200, message: "Thành công", data: res.data.data };
+      } else if (res.data && Array.isArray(res.data)) {
+        return { code: 200, message: "Thành công", data: res.data };
+      } else {
+        console.log('⚠️ Unexpected farmer response structure:', res.data);
+        return { code: 200, message: "Thành công", data: [] };
+      }
+    } catch (firstError) {
+      console.log('⚠️ First endpoint failed, trying alternative...');
+      
+      // Thử endpoint khác nếu endpoint đầu tiên thất bại
+      const res = await api.get("/CropSeasons");
+      console.log('📡 Alternative API Response:', res);
+      
+      if (res.data && res.data.data) {
+        return { code: 200, message: "Thành công", data: res.data.data };
+      } else if (res.data && Array.isArray(res.data)) {
+        return { code: 200, message: "Thành công", data: res.data };
+      } else {
+        console.log('⚠️ Alternative endpoint also failed');
+        return { code: 200, message: "Thành công", data: [] };
+      }
+    }
   } catch (err) {
-    console.error("Lỗi getCropSeasonsForCurrentUser:", err);
-    return [];
+    console.error("getCropSeasonsForCurrentUser:", err);
+    return { code: 400, message: "Không thể tải dữ liệu", data: null };
   }
 }
 
-// Lấy chi tiết 1 mùa vụ (kèm danh sách vùng trồng)
-export async function getCropSeasonById(id: string): Promise<CropSeason | null> {
+// Lấy chi tiết mùa vụ theo ID
+export async function getCropSeasonById(id: string): Promise<ServiceResult<CropSeason>> {
   try {
-    const res = await api.get<CropSeason>(`/CropSeasons/${id}`);
-    return res.data;
+    const res = await api.get(`/CropSeasons/${id}`);
+    return { code: 200, message: "Thành công", data: res.data };
   } catch (err) {
-    console.error("Lỗi getCropSeasonById:", err);
-    return null;
+    console.error("getCropSeasonById:", err);
+    return { code: 400, message: "Không tìm thấy mùa vụ", data: null };
   }
 }
 
-// Tạo mùa vụ mới
+// Tạo mới mùa vụ
 export async function createCropSeason(data: Partial<CropSeason>): Promise<ServiceResult> {
   try {
-    const res = await api.post<ServiceResult>("/CropSeasons", data);
-    if (!res.data || res.data.code === 400 || res.data.data === null) {
-      throw new Error(res.data.message || "Tạo mùa vụ thất bại.");
-    }
+    const res = await api.post("/CropSeasons", data);
     return res.data;
-  } catch (err) {
-    console.error("Lỗi createCropSeason:", err);
-    throw err;
-  }
-}
-
-// Xoá mềm mùa vụ
-export async function deleteCropSeasonById(id: string): Promise<{ code: number; message: string }> {
-  try {
-    const res = await api.patch(`/CropSeasons/soft-delete/${id}`);
-    return {
-      code: 200,
-      message: res.data || "Xoá thành công",
-    };
   } catch (err: any) {
-    const message = err?.response?.data || err?.message || "Xoá mùa vụ thất bại.";
-    return {
-      code: 400,
-      message,
-    };
+    console.error("createCropSeason:", err);
+    const message = err?.response?.data?.message || err.message || "Tạo mùa vụ thất bại.";
+    return { code: 400, message, data: null };
   }
 }
 
 // Cập nhật mùa vụ
 export async function updateCropSeason(
   id: string,
-  data: CropSeasonUpdatePayload
-): Promise<{ success: boolean; error?: string }> {
+  data: Partial<CropSeasonUpdatePayload>
+): Promise<ServiceResult> {
   try {
     const res = await api.put(`/CropSeasons/${id}`, data);
-    return { success: res.status === 200 };
+    return { code: 200, message: "Cập nhật thành công", data: null };
   } catch (err: any) {
-    const message =
-      err?.response?.data?.message || err?.response?.data || err.message || "Lỗi không xác định";
-    console.error("Lỗi updateCropSeason:", message);
-    return { success: false, error: message };
+    console.error("updateCropSeason:", err);
+    const message = err?.response?.data?.message || err.message || "Cập nhật thất bại.";
+    return { code: 400, message, data: null };
+  }
+}
+
+// Xoá mềm mùa vụ
+export async function deleteCropSeasonById(id: string): Promise<ServiceResult> {
+  try {
+    const res = await api.patch(`/CropSeasons/soft-delete/${id}`);
+    return { code: 200, message: res.data || "Đã xoá mùa vụ", data: null };
+  } catch (err: any) {
+    const message = err?.response?.data || err?.message || "Xoá mùa vụ thất bại.";
+    return { code: 400, message, data: null };
   }
 }

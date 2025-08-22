@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+// import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -15,7 +15,7 @@ export default function WarehouseRequestsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [statusCounts, setStatusCounts] = useState<{[key: string]: number}>({});
+  const [statusCounts, setStatusCounts] = useState<{ [key: string]: number }>({});
 
   const loadRequests = useCallback(async () => {
     try {
@@ -24,17 +24,17 @@ export default function WarehouseRequestsScreen() {
       const data = await getWarehouseInboundRequestsForCurrentUser();
       console.log('📦 Dữ liệu nhận được:', data);
       console.log('📦 Số lượng yêu cầu:', data?.length || 0);
-      
+
       // Filter locally since API doesn't support search/status params
-      let filteredData = data;
-      
-      if (searchQuery) {
-        filteredData = filteredData.filter(request => 
+      let filteredData = data || [];
+
+      if (searchQuery && Array.isArray(filteredData)) {
+        filteredData = filteredData.filter(request =>
           request.batchName?.toLowerCase().includes(searchQuery.toLowerCase())
         );
       }
-      
-      if (selectedStatus) {
+
+      if (selectedStatus && Array.isArray(filteredData)) {
         console.log('🔍 Filtering by status:', selectedStatus);
         filteredData = filteredData.filter(request => {
           const requestStatus = request.status?.toString().toUpperCase();
@@ -43,16 +43,18 @@ export default function WarehouseRequestsScreen() {
           return requestStatus === selectedStatusUpper;
         });
       }
-      
+
       console.log('🔍 Dữ liệu sau khi filter:', filteredData);
       setRequests(filteredData);
-      
+
       // Tính số lượng cho mỗi trạng thái
-      const counts: {[key: string]: number} = {};
-      data.forEach(request => {
-        const status = request.status?.toString().toUpperCase() || 'UNKNOWN';
-        counts[status] = (counts[status] || 0) + 1;
-      });
+      const counts: { [key: string]: number } = {};
+      if (data && Array.isArray(data)) {
+        data.forEach(request => {
+          const status = request.status?.toString().toUpperCase() || 'UNKNOWN';
+          counts[status] = (counts[status] || 0) + 1;
+        });
+      }
       setStatusCounts(counts);
       console.log('📊 Status counts:', counts);
     } catch (error) {
@@ -89,42 +91,42 @@ export default function WarehouseRequestsScreen() {
     router.push(`/warehouse/${requestId}`);
   };
 
-     if (loading && !refreshing) {
-     return (
-       <Background>
-         <View style={styles.loadingContainer}>
-           <ActivityIndicator size="large" color="#FD7622" />
-           <Text style={styles.loadingText}>Đang tải...</Text>
-         </View>
-       </Background>
-     );
-   }
+  if (loading && !refreshing) {
+    return (
+      <Background>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FD7622" />
+          <Text style={styles.loadingText}>Đang tải...</Text>
+        </View>
+      </Background>
+    );
+  }
 
-     return (
-     <Background>
-       {/* Header with Action Buttons */}
-       <View style={styles.headerContainer}>
-         <Button
-           mode="text"
-           onPress={() => router.back()}
-           style={styles.headerButton}
-           textColor="#6B7280"
-           icon="arrow-left"
-         >
-           Quay lại
-         </Button>
-         
-         <Button
-           mode="contained"
-           onPress={() => router.push('/warehouse/create')}
-           style={styles.createButton}
-           buttonColor="#FD7622"
-           icon="plus"
-         >
-           Tạo yêu cầu
-         </Button>
-       </View>
-      
+  return (
+    <Background>
+      {/* Header with Action Buttons */}
+      <View style={styles.headerContainer}>
+        <Button
+          mode="text"
+          onPress={() => router.back()}
+          style={styles.headerButton}
+          textColor="#6B7280"
+          icon="arrow-left"
+        >
+          Quay lại
+        </Button>
+
+        <Button
+          mode="contained"
+          onPress={() => router.push('/warehouse/create')}
+          style={styles.createButton}
+          buttonColor="#FD7622"
+          icon="plus"
+        >
+          Tạo yêu cầu
+        </Button>
+      </View>
+
       <View style={styles.container}>
         <Searchbar
           placeholder="Tìm kiếm yêu cầu..."
@@ -153,14 +155,14 @@ export default function WarehouseRequestsScreen() {
                   setSelectedStatus(option.value);
                 }}
               >
-                                 <Text
-                   style={[
-                     styles.statusChipText,
-                     selectedStatus === option.value && styles.statusChipTextActive,
-                   ]}
-                 >
-                   {option.label} ({count})
-                 </Text>
+                <Text
+                  style={[
+                    styles.statusChipText,
+                    selectedStatus === option.value && styles.statusChipTextActive,
+                  ]}
+                >
+                  {option.label} ({count})
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -175,24 +177,24 @@ export default function WarehouseRequestsScreen() {
         >
           {requests.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="package-variant" size={64} color="#9CA3AF" />
+              <Text style={{ fontSize: 64, color: "#9CA3AF" }}>📦</Text>
               <Text style={styles.emptyTitle}>Chưa có yêu cầu nhập kho</Text>
               <Text style={styles.emptySubtitle}>
                 Tạo yêu cầu nhập kho đầu tiên để bắt đầu
               </Text>
             </View>
           ) : (
-                                     requests.map((request) => {
+            requests.map((request) => {
               console.log('🔍 Request object in map:', request);
               console.log('🔍 Request.id:', request.id);
               console.log('🔍 Request.requestId:', request.requestId);
               console.log('🔍 All request keys:', Object.keys(request));
-              
+
               // Sử dụng inboundRequestId (UUID) cho API call, không phải requestCode
               const requestId = request.inboundRequestId || request.id || request.requestId || request.warehouseInboundRequestId;
               console.log('🔍 Final requestId to use:', requestId);
               console.log('🔍 RequestCode (for display):', request.requestCode);
-              
+
               return (
                 <WarehouseRequestCard
                   key={requestId}
