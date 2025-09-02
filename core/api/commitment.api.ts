@@ -58,7 +58,7 @@ export const CommitmentStatusLabels: Record<CommitmentStatus, string> = {
  */
 export async function getFarmerCommitments(): Promise<CommitmentListItem[]> {
   try {
-    const response = await api.get('/Commitments/farmer');
+    const response = await api.get('/FarmingCommitment/Farmer');
     return response.data || [];
   } catch (error) {
     console.error('❌ Error fetching farmer commitments:', error);
@@ -71,7 +71,7 @@ export async function getFarmerCommitments(): Promise<CommitmentListItem[]> {
  */
 export async function getCommitmentById(id: string): Promise<Commitment | null> {
   try {
-    const response = await api.get(`/Commitments/${id}`);
+    const response = await api.get(`/FarmingCommitment/${id}`);
     return response.data || null;
   } catch (error) {
     console.error('❌ Error fetching commitment by ID:', error);
@@ -84,7 +84,7 @@ export async function getCommitmentById(id: string): Promise<Commitment | null> 
  */
 export async function getActiveFarmerCommitments(): Promise<CommitmentListItem[]> {
   try {
-    const response = await api.get('/Commitments/farmer/active');
+    const response = await api.get('/FarmingCommitment/Farmer/Active');
     return response.data || [];
   } catch (error) {
     console.error('❌ Error fetching active farmer commitments:', error);
@@ -97,7 +97,7 @@ export async function getActiveFarmerCommitments(): Promise<CommitmentListItem[]
  */
 export async function getCommitmentsByStatus(status: CommitmentStatus): Promise<CommitmentListItem[]> {
   try {
-    const response = await api.get(`/Commitments/farmer/status/${status}`);
+    const response = await api.get(`/FarmingCommitment/Farmer/Status/${status}`);
     return response.data || [];
   } catch (error) {
     console.error('❌ Error fetching commitments by status:', error);
@@ -110,7 +110,7 @@ export async function getCommitmentsByStatus(status: CommitmentStatus): Promise<
  */
 export async function searchCommitments(query: string): Promise<CommitmentListItem[]> {
   try {
-    const response = await api.get(`/Commitments/farmer/search?q=${encodeURIComponent(query)}`);
+    const response = await api.get(`/FarmingCommitment/Farmer/Search?q=${encodeURIComponent(query)}`);
     return response.data || [];
   } catch (error) {
     console.error('❌ Error searching commitments:', error);
@@ -123,7 +123,7 @@ export async function searchCommitments(query: string): Promise<CommitmentListIt
  */
 export async function getCommitmentsByCoffeeType(coffeeType: string): Promise<CommitmentListItem[]> {
   try {
-    const response = await api.get(`/Commitments/farmer/coffee-type/${encodeURIComponent(coffeeType)}`);
+    const response = await api.get(`/FarmingCommitment/Farmer/CoffeeType/${encodeURIComponent(coffeeType)}`);
     return response.data || [];
   } catch (error) {
     console.error('❌ Error fetching commitments by coffee type:', error);
@@ -145,7 +145,7 @@ export async function getFarmerCommitmentStats(): Promise<{
   totalQuantity: number;
 }> {
   try {
-    const response = await api.get('/Commitments/farmer/stats');
+    const response = await api.get('/FarmingCommitment/Farmer/Stats');
     return response.data || {
       total: 0,
       active: 0,

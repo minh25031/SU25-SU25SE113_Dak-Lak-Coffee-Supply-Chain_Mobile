@@ -25,7 +25,7 @@ export default function WarehouseRequestCard({ request, onPress }: Props) {
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.header}>
         <View style={styles.coffeeInfo}>
-          <MaterialCommunityIcons name="package-variant" size={20} color="#FD7622" />
+          <MaterialCommunityIcons name="package-variant" size={18} color="#FD7622" />
           <Text style={styles.coffeeName}>
             {request.batchName || request.batchCode || request.batchId || request.requestCode || `Yêu cầu #${(request.inboundRequestId || request.id || request.requestId || '').slice(0, 8)}`}
           </Text>
@@ -39,26 +39,26 @@ export default function WarehouseRequestCard({ request, onPress }: Props) {
 
       <View style={styles.content}>
         <View style={styles.row}>
-          <MaterialCommunityIcons name="scale" size={16} color="#6B7280" />
+          <MaterialCommunityIcons name="scale" size={14} color="#6B7280" />
           <Text style={styles.label}>Số lượng:</Text>
           <Text style={styles.value}>{request.requestedQuantity} kg</Text>
         </View>
 
         <View style={styles.row}>
-          <MaterialCommunityIcons name="calendar" size={16} color="#6B7280" />
+          <MaterialCommunityIcons name="calendar" size={14} color="#6B7280" />
           <Text style={styles.label}>Ngày giao:</Text>
           <Text style={styles.value}>{formatDate(request.preferredDeliveryDate)}</Text>
         </View>
 
         <View style={styles.row}>
-          <MaterialCommunityIcons name="clock-outline" size={16} color="#6B7280" />
+          <MaterialCommunityIcons name="clock-outline" size={14} color="#6B7280" />
           <Text style={styles.label}>Tạo lúc:</Text>
           <Text style={styles.value}>{formatDate(request.createdAt)}</Text>
         </View>
 
         {request.businessStaffName && (
           <View style={styles.row}>
-            <MaterialCommunityIcons name="account-check" size={16} color="#6B7280" />
+            <MaterialCommunityIcons name="account-check" size={14} color="#6B7280" />
             <Text style={styles.label}>Người duyệt:</Text>
             <Text style={styles.value}>{request.businessStaffName}</Text>
           </View>
@@ -71,22 +71,22 @@ export default function WarehouseRequestCard({ request, onPress }: Props) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 3,
+    elevation: 1,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   coffeeInfo: {
     flexDirection: 'row',
@@ -94,37 +94,37 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   coffeeName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1F2937',
-    marginLeft: 8,
+    marginLeft: 6,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     color: '#FFFFFF',
   },
   content: {
-    gap: 8,
+    gap: 6,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B7280',
-    marginLeft: 6,
-    marginRight: 8,
-    minWidth: 80,
+    marginLeft: 4,
+    marginRight: 6,
+    minWidth: 70,
   },
   value: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#1F2937',
     fontWeight: '500',
     flex: 1,

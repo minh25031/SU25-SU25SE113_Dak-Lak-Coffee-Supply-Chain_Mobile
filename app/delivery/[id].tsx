@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Button, Card, TextInput, Divider } from 'react-native-paper';
+import { Button, Card, TextInput, Divider, HelperText } from 'react-native-paper';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -23,17 +23,44 @@ export default function ShipmentDetailScreen() {
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [note, setNote] = useState('');
+  const [errors, setErrors] = useState<{
+    note?: string;
+    status?: string;
+    general?: string;
+  }>({});
+
+  // Validation functions
+  const validateNote = (text: string): string | undefined => {
+    if (text.length > 1000) {
+      return 'Ghi chú không được vượt quá 1000 ký tự';
+    }
+    return undefined;
+  };
+
+  const validateStatusTransition = (currentStatus: string, newStatus: string): string | undefined => {
+    if (!canTransitionToStatus(currentStatus, newStatus)) {
+      return `Không thể chuyển từ trạng thái "${getStatusText(currentStatus)}" sang "${getStatusText(newStatus)}"`;
+    }
+    return undefined;
+  };
+
+  const clearErrors = () => {
+    setErrors({});
+  };
 
   const loadShipment = useCallback(async () => {
     if (!shipmentId) return;
 
     try {
       setLoading(true);
+      clearErrors();
       const shipment = await getShipmentById(shipmentId);
       setCurrentShipment(shipment);
     } catch (error) {
       console.error('❌ Error loading shipment:', error);
-      Alert.alert('Lỗi', 'Không thể tải thông tin chuyến giao');
+      setErrors({
+        general: 'Không thể tải thông tin chuyến giao. Vui lòng thử lại sau.'
+      });
     } finally {
       setLoading(false);
     }
@@ -48,9 +75,18 @@ export default function ShipmentDetailScreen() {
   const handleUpdateStatus = async (newStatus: string) => {
     if (!currentShipment) return;
 
-    // Validation: Kiểm tra xem có thể chuyển sang trạng thái mới không
-    if (!canTransitionToStatus(currentShipment.deliveryStatus, newStatus)) {
-      Alert.alert('Lỗi', 'Không thể chuyển sang trạng thái này');
+    // Clear previous errors
+    clearErrors();
+
+    // Validation
+    const noteError = validateNote(note);
+    const statusError = validateStatusTransition(currentShipment.deliveryStatus, newStatus);
+
+    if (noteError || statusError) {
+      setErrors({
+        note: noteError,
+        status: statusError
+      });
       return;
     }
 
@@ -68,20 +104,47 @@ export default function ShipmentDetailScreen() {
 
       Alert.alert('Thành công', 'Đã cập nhật trạng thái giao hàng');
       setNote('');
+      clearErrors();
     } catch (error: any) {
       console.error('❌ Error updating status:', error);
 
-      // Xử lý lỗi cụ thể
+      // Handle specific errors
+      let errorMessage = 'Không thể cập nhật trạng thái. Vui lòng thử lại sau.';
+
       if (error.response?.status === 409) {
-        Alert.alert(
-          'Lỗi xung đột',
-          'Không thể cập nhật trạng thái. Có thể dữ liệu đã bị thay đổi bởi người khác. Vui lòng làm mới trang và thử lại.'
-        );
+        errorMessage = 'Không thể cập nhật trạng thái. Có thể dữ liệu đã bị thay đổi bởi người khác. Vui lòng làm mới trang và thử lại.';
       } else if (error.response?.status === 400) {
-        Alert.alert('Lỗi dữ liệu', 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
-      } else {
-        Alert.alert('Lỗi', 'Không thể cập nhật trạng thái. Vui lòng thử lại sau.');
+        if (error.response?.data?.errors) {
+          // Handle validation errors from backend
+          const backendErrors = error.response.data.errors;
+          const newErrors: any = {};
+
+          if (backendErrors.DeliveryStatus) {
+            newErrors.status = backendErrors.DeliveryStatus[0];
+          }
+          if (backendErrors.Note) {
+            newErrors.note = backendErrors.Note[0];
+          }
+          if (backendErrors.ReceivedAt) {
+            newErrors.status = backendErrors.ReceivedAt[0];
+          }
+
+          setErrors(newErrors);
+          return;
+        } else {
+          errorMessage = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.';
+        }
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Bạn không có quyền thực hiện hành động này.';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Không tìm thấy chuyến giao hàng.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
       }
+
+      setErrors({ general: errorMessage });
     } finally {
       setUpdating(false);
     }
@@ -89,6 +152,16 @@ export default function ShipmentDetailScreen() {
 
   const handleConfirmDelivery = async () => {
     if (!currentShipment) return;
+
+    // Clear previous errors
+    clearErrors();
+
+    // Validation
+    const noteError = validateNote(note);
+    if (noteError) {
+      setErrors({ note: noteError });
+      return;
+    }
 
     Alert.alert(
       'Xác nhận giao hàng',
@@ -119,20 +192,47 @@ export default function ShipmentDetailScreen() {
 
               Alert.alert('Thành công', 'Đã xác nhận giao hàng thành công');
               setNote('');
+              clearErrors();
             } catch (error: any) {
               console.error('❌ Error confirming delivery:', error);
 
-              // Xử lý lỗi cụ thể
+              // Handle specific errors
+              let errorMessage = 'Không thể xác nhận giao hàng. Vui lòng thử lại sau.';
+
               if (error.response?.status === 409) {
-                Alert.alert(
-                  'Lỗi xung đột',
-                  'Không thể xác nhận giao hàng. Có thể dữ liệu đã bị thay đổi bởi người khác. Vui lòng làm mới trang và thử lại.'
-                );
+                errorMessage = 'Không thể xác nhận giao hàng. Có thể dữ liệu đã bị thay đổi bởi người khác. Vui lòng làm mới trang và thử lại.';
               } else if (error.response?.status === 400) {
-                Alert.alert('Lỗi dữ liệu', 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
-              } else {
-                Alert.alert('Lỗi', 'Không thể xác nhận giao hàng. Vui lòng thử lại sau.');
+                if (error.response?.data?.errors) {
+                  // Handle validation errors from backend
+                  const backendErrors = error.response.data.errors;
+                  const newErrors: any = {};
+
+                  if (backendErrors.DeliveryStatus) {
+                    newErrors.status = backendErrors.DeliveryStatus[0];
+                  }
+                  if (backendErrors.Note) {
+                    newErrors.note = backendErrors.Note[0];
+                  }
+                  if (backendErrors.ReceivedAt) {
+                    newErrors.status = backendErrors.ReceivedAt[0];
+                  }
+
+                  setErrors(newErrors);
+                  return;
+                } else {
+                  errorMessage = 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.';
+                }
+              } else if (error.response?.status === 401) {
+                errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+              } else if (error.response?.status === 403) {
+                errorMessage = 'Bạn không có quyền thực hiện hành động này.';
+              } else if (error.response?.status === 404) {
+                errorMessage = 'Không tìm thấy chuyến giao hàng.';
+              } else if (error.response?.status === 500) {
+                errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
               }
+
+              setErrors({ general: errorMessage });
             } finally {
               setUpdating(false);
             }
@@ -329,15 +429,66 @@ export default function ShipmentDetailScreen() {
                 <Text style={styles.cardTitle}>Cập nhật trạng thái</Text>
                 <Divider style={styles.divider} />
 
+                {/* Error Summary */}
+                {(errors.note || errors.status || errors.general) && (
+                  <View style={styles.errorContainer}>
+                    <MaterialCommunityIcons name="alert-circle" size={20} color="#EF4444" />
+                    <Text style={styles.errorTitle}>Vui lòng sửa các lỗi sau:</Text>
+
+                    {errors.note && (
+                      <Text style={styles.errorItem}>• {errors.note}</Text>
+                    )}
+                    {errors.status && (
+                      <Text style={styles.errorItem}>• {errors.status}</Text>
+                    )}
+                    {errors.general && (
+                      <Text style={styles.errorItem}>• {errors.general}</Text>
+                    )}
+                  </View>
+                )}
+
                 <TextInput
                   label="Ghi chú (tùy chọn)"
                   value={note}
-                  onChangeText={setNote}
+                  onChangeText={(text) => {
+                    setNote(text);
+                    if (errors.note) {
+                      setErrors(prev => ({ ...prev, note: undefined }));
+                    }
+                  }}
                   mode="outlined"
                   multiline
                   numberOfLines={3}
                   style={styles.noteInput}
+                  error={!!errors.note}
+                  maxLength={1000}
                 />
+
+                {/* Note validation error */}
+                {errors.note && (
+                  <HelperText type="error" visible={true}>
+                    {errors.note}
+                  </HelperText>
+                )}
+
+                {/* Note character count */}
+                <HelperText type="info" visible={true}>
+                  {note.length}/1000 ký tự
+                </HelperText>
+
+                {/* Status validation error */}
+                {errors.status && (
+                  <HelperText type="error" visible={true}>
+                    {errors.status}
+                  </HelperText>
+                )}
+
+                {/* General error */}
+                {errors.general && (
+                  <HelperText type="error" visible={true}>
+                    {errors.general}
+                  </HelperText>
+                )}
 
                 <View style={styles.actionButtons}>
                   {currentShipment.deliveryStatus === 'Pending' && (
@@ -515,5 +666,26 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     backgroundColor: '#F3F4F6',
+  },
+  errorContainer: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#DC2626',
+    marginLeft: 8,
+    marginBottom: 8,
+  },
+  errorItem: {
+    fontSize: 13,
+    color: '#DC2626',
+    marginLeft: 28,
+    marginBottom: 4,
   },
 });
