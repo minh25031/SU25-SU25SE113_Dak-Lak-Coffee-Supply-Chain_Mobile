@@ -23,7 +23,7 @@ export default function WarehouseRequestDetailScreen() {
     if (id) {
       loadRequestDetail();
     }
-  }, [id]);
+  }, [id, loadRequestDetail]);
 
   const loadRequestDetail = async () => {
     try {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ActivityIndicator, Button, Card, Searchbar } from 'react-native-paper';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -6,11 +6,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import Background from '@/components/Background';
 import ShipmentCard from '@/components/ShipmentCard';
-import { 
-  getMyShipments, 
-  getDeliveryStatistics, 
-  Shipment, 
-  DeliveryStatistics 
+import {
+  getMyShipments,
+  getDeliveryStatistics,
+  Shipment
 } from '@/core/api/delivery.api';
 import { useDeliveryStore } from '@/stores/deliveryStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -71,13 +70,13 @@ export default function DeliveryDashboard() {
   };
 
   const filteredShipments = shipments.filter(shipment => {
-    const matchesSearch = 
+    const matchesSearch =
       shipment.shipmentCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
       shipment.orderCode.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = !selectedStatus || 
+
+    const matchesStatus = !selectedStatus ||
       shipment.deliveryStatus === selectedStatus;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -185,8 +184,8 @@ export default function DeliveryDashboard() {
         </View>
 
         {/* Status Filter */}
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filterContainer}
         >
@@ -213,7 +212,7 @@ export default function DeliveryDashboard() {
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons name="truck-delivery-outline" size={64} color="#9CA3AF" />
               <Text style={styles.emptyText}>
-                {searchQuery || selectedStatus 
+                {searchQuery || selectedStatus
                   ? 'Không tìm thấy chuyến giao phù hợp'
                   : 'Chưa có chuyến giao nào được phân công'
                 }
@@ -226,7 +225,7 @@ export default function DeliveryDashboard() {
                 console.warn('⚠️ Delivery dashboard: shipment is null/undefined');
                 return null;
               }
-              
+
               return (
                 <ShipmentCard
                   key={shipment.shipmentId}

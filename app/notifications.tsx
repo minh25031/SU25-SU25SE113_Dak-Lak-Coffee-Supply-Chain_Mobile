@@ -35,7 +35,7 @@ export default function NotificationsScreen() {
 
     useEffect(() => {
         clear(); // ✅ chỉ gọi 1 lần khi vào màn hình
-    }, []);
+    }, [clear]);
 
     return (
         <SafeAreaView style={styles.container}>

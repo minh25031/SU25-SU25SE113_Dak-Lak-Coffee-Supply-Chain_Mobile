@@ -11,6 +11,7 @@ import {
     ScrollView,
     Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { login } from '@/core/api/auth.api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
@@ -27,8 +29,11 @@ export default function LoginScreen() {
             return;
         }
 
+
+
         setLoading(true);
         try {
+            console.log('🔐 Attempting login to:', 'https://daklak.coffee.techtheworld.id.vn/api/Auth/login');
             const response = await login(email, password);
             console.log('📡 Login response:', response);
 
@@ -99,8 +104,20 @@ export default function LoginScreen() {
             }
         } catch (error: any) {
             console.error('❌ Login error:', error);
-            const errorMessage = error.response?.data?.message || error.message || 'Đăng nhập thất bại';
-            Alert.alert('Lỗi', errorMessage);
+
+            let errorMessage = 'Đăng nhập thất bại';
+
+            if (error.response?.status === 401) {
+                errorMessage = 'Email hoặc mật khẩu không đúng';
+            } else if (error.response?.status === 0 || error.code === 'NETWORK_ERROR') {
+                errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra internet';
+            } else if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            Alert.alert('Lỗi đăng nhập', errorMessage);
         } finally {
             setLoading(false);
         }
@@ -130,6 +147,8 @@ export default function LoginScreen() {
                     <Text style={styles.welcomeText}>Chào mừng bạn trở lại!</Text>
                     <Text style={styles.subtitleText}>Đăng nhập để tiếp tục</Text>
 
+
+
                     <View style={styles.inputContainer}>
                         <Text style={styles.inputLabel}>Email</Text>
                         <TextInput
@@ -145,14 +164,26 @@ export default function LoginScreen() {
 
                     <View style={styles.inputContainer}>
                         <Text style={styles.inputLabel}>Mật khẩu</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Nhập mật khẩu"
-                            placeholderTextColor="#9CA3AF"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry
-                        />
+                        <View style={styles.passwordContainer}>
+                            <TextInput
+                                style={styles.passwordInput}
+                                placeholder="Nhập mật khẩu"
+                                placeholderTextColor="#9CA3AF"
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry={!showPassword}
+                            />
+                            <TouchableOpacity
+                                style={styles.eyeButton}
+                                onPress={() => setShowPassword(!showPassword)}
+                            >
+                                <Ionicons
+                                    name={showPassword ? 'eye-off' : 'eye'}
+                                    size={24}
+                                    color="#6B7280"
+                                />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     <TouchableOpacity
@@ -170,6 +201,20 @@ export default function LoginScreen() {
                         onPress={() => Alert.alert('Thông báo', 'Tính năng đang phát triển')}
                     >
                         <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.testConnectionButton}
+                        onPress={async () => {
+                            try {
+                                const response = await fetch('https://daklak.coffee.techtheworld.id.vn/api/health');
+                                Alert.alert('Kết nối server', `Server đang hoạt động: ${response.status}`);
+                            } catch (error) {
+                                Alert.alert('Kết nối server', 'Không thể kết nối đến server. Vui lòng kiểm tra internet hoặc liên hệ admin.');
+                            }
+                        }}
+                    >
+                        <Text style={styles.testConnectionText}>🔍 Test kết nối server</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -244,8 +289,9 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#6B7280',
         textAlign: 'center',
-        marginBottom: 32,
+        marginBottom: 16,
     },
+
     inputContainer: {
         marginBottom: 20,
     },
@@ -264,6 +310,25 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         fontSize: 16,
         color: '#1F2937',
+    },
+    passwordContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderWidth: 2,
+        borderColor: '#E5E7EB',
+        borderRadius: 12,
+    },
+    passwordInput: {
+        flex: 1,
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        fontSize: 16,
+        color: '#1F2937',
+    },
+    eyeButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 16,
     },
     loginButton: {
         backgroundColor: '#FD7622',
@@ -292,6 +357,18 @@ const styles = StyleSheet.create({
     forgotPasswordText: {
         color: '#FD7622',
         fontSize: 16,
+        fontWeight: '500',
+    },
+    testConnectionButton: {
+        alignItems: 'center',
+        marginTop: 16,
+        padding: 12,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 8,
+    },
+    testConnectionText: {
+        color: '#6B7280',
+        fontSize: 14,
         fontWeight: '500',
     },
     footer: {

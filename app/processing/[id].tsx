@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Card, Badge, Button, Divider, ActivityIndicator } from 'react-native-paper';
+import { Card, Button, Divider, ActivityIndicator } from 'react-native-paper';
 
 import Background from '@/components/Background';
 import BackButton from '@/components/BackButton';
@@ -48,7 +48,7 @@ export default function ProcessingBatchDetailScreen() {
 
   const fetchBatchDetail = async () => {
     if (!id) return;
-    
+
     try {
       setLoading(true);
       setError(null);
@@ -70,7 +70,7 @@ export default function ProcessingBatchDetailScreen() {
 
   useEffect(() => {
     fetchBatchDetail();
-  }, [id]);
+  }, [id, fetchBatchDetail]);
 
   const handleUpdateProgress = () => {
     Alert.alert('Thông báo', 'Tính năng cập nhật tiến độ sẽ được phát triển sau');
@@ -90,8 +90,8 @@ export default function ProcessingBatchDetailScreen() {
       'Bạn có chắc chắn muốn xóa lô sơ chế này?',
       [
         { text: 'Hủy', style: 'cancel' },
-        { 
-          text: 'Xóa', 
+        {
+          text: 'Xóa',
           style: 'destructive',
           onPress: async () => {
             if (!id) return;
@@ -148,8 +148,8 @@ export default function ProcessingBatchDetailScreen() {
           <View style={{ width: 40 }} />
         </View>
 
-        <ScrollView 
-          style={styles.content} 
+        <ScrollView
+          style={styles.content}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -160,17 +160,17 @@ export default function ProcessingBatchDetailScreen() {
             <Card.Content>
               <View style={styles.batchHeader}>
                 <Text style={styles.batchCode}>{batchDetail.batchCode}</Text>
-                <Badge 
+                <Badge
                   style={[styles.statusBadge, { backgroundColor: getStatusColor(batchDetail.status) }]}
                 >
                   {getStatusText(batchDetail.status)}
                 </Badge>
               </View>
-              
+
               {batchDetail.description && (
                 <Text style={styles.description}>{batchDetail.description}</Text>
               )}
-              
+
               <View style={styles.infoGrid}>
                 <View style={styles.infoItem}>
                   <MaterialCommunityIcons name="coffee" size={20} color="#6B7280" />
@@ -199,14 +199,14 @@ export default function ProcessingBatchDetailScreen() {
                 <Text style={styles.sectionTitle}>Tiến độ xử lý</Text>
                 <View style={styles.progressContainer}>
                   <View style={styles.progressBar}>
-                    <View 
+                    <View
                       style={[
-                        styles.progressFill, 
-                        { 
+                        styles.progressFill,
+                        {
                           width: `${batchDetail.progress}%`,
                           backgroundColor: getStatusColor(batchDetail.status)
                         }
-                      ]} 
+                      ]}
                     />
                   </View>
                   <Text style={styles.progressText}>{batchDetail.progress}%</Text>
@@ -226,13 +226,13 @@ export default function ProcessingBatchDetailScreen() {
                     <Text style={styles.viewAllText}>Xem tất cả</Text>
                   </TouchableOpacity>
                 </View>
-                
+
                 {batchDetail.stages.slice(0, 3).map((stage) => (
                   <View key={stage.id} style={styles.stageItem}>
                     <View style={styles.stageInfo}>
                       <View style={styles.stageHeader}>
                         <Text style={styles.stageName}>{stage.name}</Text>
-                        <Badge 
+                        <Badge
                           style={[styles.stageBadge, { backgroundColor: getStatusColor(stage.status) }]}
                         >
                           {getStatusText(stage.status)}
@@ -280,7 +280,7 @@ export default function ProcessingBatchDetailScreen() {
             >
               Cập nhật tiến độ
             </Button>
-            
+
             <View style={styles.secondaryButtons}>
               <Button
                 mode="outlined"
@@ -290,7 +290,7 @@ export default function ProcessingBatchDetailScreen() {
               >
                 Chỉnh sửa
               </Button>
-              
+
               <Button
                 mode="outlined"
                 onPress={handleDeleteBatch}

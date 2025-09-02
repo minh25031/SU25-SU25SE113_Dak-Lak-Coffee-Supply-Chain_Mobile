@@ -7,13 +7,11 @@ import {
     TouchableOpacity,
     RefreshControl,
     Image,
-    Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CarouselBanner from '@/components/CarouselBanner';
-
-const { width } = Dimensions.get('window');
+import { dashboardAPI, MenuItem, DashboardStats, ActivityItem } from '@/core/api/dashboard.api';
 
 interface UserInfo {
     name: string;
@@ -23,6 +21,8 @@ interface UserInfo {
 
 export default function HomeScreen() {
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+    const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const router = useRouter();
 
@@ -39,6 +39,9 @@ export default function HomeScreen() {
                 const user = JSON.parse(userInfoStr);
                 console.log('👤 Parsed user info:', user);
                 setUserInfo(user);
+
+                // Load dashboard data theo role
+                await loadDashboardData(user.role);
             } else {
                 console.log('⚠️ No userInfo found in AsyncStorage');
             }
@@ -47,9 +50,24 @@ export default function HomeScreen() {
         }
     };
 
+    const [stats, setStats] = useState<DashboardStats[]>([]);
+
+    const loadDashboardData = async (role: string) => {
+        try {
+            const dashboardData = await dashboardAPI.getDashboardData(role);
+            setMenuItems(dashboardData.menuItems);
+            setStats(dashboardData.stats);
+            setActivities(dashboardData.activities);
+        } catch (error) {
+            console.error('❌ Error loading dashboard data:', error);
+        }
+    };
+
     const onRefresh = async () => {
         setRefreshing(true);
-        await loadUserInfo();
+        if (userInfo?.role) {
+            await loadDashboardData(userInfo.role);
+        }
         setRefreshing(false);
     };
 
@@ -85,126 +103,15 @@ export default function HomeScreen() {
         }
     };
 
-    const menuItems = [
-        {
-            id: 'cropseason',
-            title: 'Mùa vụ',
-            subtitle: 'Quản lý mùa vụ cà phê',
-            icon: '🌱',
-            color: '#10B981',
-            route: '/cropseason' as any,
-            roles: ['Farmer', 'Manager'],
-        },
-        {
-            id: 'warehouse',
-            title: 'Kho hàng',
-            subtitle: 'Quản lý nhập xuất kho',
-            icon: '🏭',
-            color: '#3B82F6',
-            route: '/warehouse' as any,
-            roles: ['Farmer', 'Manager', 'Staff'],
-        },
-        {
-            id: 'delivery',
-            title: 'Giao hàng',
-            subtitle: 'Quản lý đơn hàng giao',
-            icon: '🚚',
-            color: '#F59E0B',
-            route: '/delivery' as any,
-            roles: ['DeliveryStaff', 'Manager'],
-        },
-        {
-            id: 'orders',
-            title: 'Đơn hàng',
-            subtitle: 'Theo dõi trạng thái đơn hàng',
-            icon: '📋',
-            color: '#8B5CF6',
-            route: '/orders' as any,
-            roles: ['DeliveryStaff', 'Manager'],
-        },
-        {
-            id: 'progress',
-            title: 'Tiến độ',
-            subtitle: 'Theo dõi tiến độ sản xuất',
-            icon: '📊',
-            color: '#F59E0B',
-            route: '/progress' as any,
-            roles: ['Farmer', 'Manager'],
-        },
-        {
-            id: 'reports',
-            title: 'Báo cáo',
-            subtitle: 'Xem báo cáo tổng hợp',
-            icon: '📈',
-            color: '#8B5CF6',
-            route: '/reports' as any,
-            roles: ['Farmer', 'Manager', 'DeliveryStaff'],
-        },
-    ];
-
-    // Lọc menu items theo role
+    // Lọc menu items theo role (đã được load từ API)
     const filteredMenuItems = menuItems.filter(item =>
         item.roles.includes(userInfo?.role || '')
     );
 
-    // Stats theo role
-    const getStatsByRole = () => {
-        const role = userInfo?.role || '';
 
-        if (role === 'DeliveryStaff') {
-            return [
-                { icon: '🚚', number: '8', label: 'Đơn giao' },
-                { icon: '✅', number: '5', label: 'Đã giao' },
-                { icon: '⏳', number: '3', label: 'Đang giao' },
-                { icon: '💰', number: '1.2M', label: 'Doanh thu' },
-            ];
-        } else if (role === 'Farmer') {
-            return [
-                { icon: '🌱', number: '3', label: 'Mùa vụ' },
-                { icon: '📦', number: '12', label: 'Lô hàng' },
-                { icon: '📊', number: '85%', label: 'Tiến độ' },
-                { icon: '💰', number: '2.5M', label: 'Doanh thu' },
-            ];
-        } else {
-            // Manager/Staff
-            return [
-                { icon: '🌱', number: '15', label: 'Mùa vụ' },
-                { icon: '📦', number: '48', label: 'Lô hàng' },
-                { icon: '🚚', number: '25', label: 'Đơn giao' },
-                { icon: '💰', number: '12.5M', label: 'Doanh thu' },
-            ];
-        }
-    };
 
-    const statsData = getStatsByRole();
-
-    // Hoạt động theo role
-    const getActivitiesByRole = () => {
-        const role = userInfo?.role || '';
-
-        if (role === 'DeliveryStaff') {
-            return [
-                { icon: '🚚', title: 'Đơn hàng mới được giao', time: '2 giờ trước' },
-                { icon: '✅', title: 'Giao hàng thành công', time: '5 giờ trước' },
-                { icon: '📱', title: 'Cập nhật trạng thái giao hàng', time: '1 ngày trước' },
-            ];
-        } else if (role === 'Farmer') {
-            return [
-                { icon: '🌱', title: 'Mùa vụ mới được tạo', time: '2 giờ trước' },
-                { icon: '📦', title: 'Lô hàng đã được nhập kho', time: '5 giờ trước' },
-                { icon: '📊', title: 'Cập nhật tiến độ sản xuất', time: '1 ngày trước' },
-            ];
-        } else {
-            // Manager/Staff
-            return [
-                { icon: '🌱', title: 'Mùa vụ mới được tạo', time: '2 giờ trước' },
-                { icon: '📦', title: 'Lô hàng đã được nhập kho', time: '5 giờ trước' },
-                { icon: '🚚', title: 'Đơn hàng giao mới', time: '1 ngày trước' },
-            ];
-        }
-    };
-
-    const activitiesData = getActivitiesByRole();
+    // Hoạt động theo role - sử dụng API thay vì hardcode
+    const activitiesData = activities;
 
     return (
         <ScrollView
@@ -250,8 +157,8 @@ export default function HomeScreen() {
             <View style={styles.statsContainer}>
                 <Text style={styles.sectionTitle}>Tổng quan</Text>
                 <View style={styles.statsGrid}>
-                    {statsData.map((stat, index) => (
-                        <View key={index} style={styles.statCard}>
+                    {stats.map((stat, index) => (
+                        <View key={index} style={[styles.statCard, { flex: 1, marginHorizontal: 4 }]}>
                             <Text style={styles.statIcon}>{stat.icon}</Text>
                             <Text style={styles.statNumber}>{stat.number}</Text>
                             <Text style={styles.statLabel}>{stat.label}</Text>
@@ -389,27 +296,25 @@ const styles = StyleSheet.create({
         marginHorizontal: 24,
         marginBottom: 30,
     },
-    statsContainer: {
-        paddingHorizontal: 24,
-        marginBottom: 30,
-    },
     sectionTitle: {
         fontSize: 20,
         fontWeight: '600',
         color: '#1F2937',
         marginBottom: 20,
     },
+    statsContainer: {
+        paddingHorizontal: 24,
+        marginBottom: 30,
+    },
     statsGrid: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        gap: 12,
     },
     statCard: {
         backgroundColor: '#FFFFFF',
-        padding: 16,
-        borderRadius: 16,
         alignItems: 'center',
-        flex: 1,
-        marginHorizontal: 4,
+        padding: 20,
+        borderRadius: 16,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -417,17 +322,17 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     statIcon: {
-        fontSize: 24,
+        fontSize: 32,
         marginBottom: 8,
     },
     statNumber: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#1F2937',
         marginBottom: 4,
     },
     statLabel: {
-        fontSize: 12,
+        fontSize: 14,
         color: '#6B7280',
         textAlign: 'center',
     },
