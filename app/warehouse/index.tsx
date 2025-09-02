@@ -1,8 +1,9 @@
-// import { MaterialCommunityIcons } from '@expo/vector-icons';
+import BackButton from "@/components/BackButton";
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, FlatList } from 'react-native';
 import { ActivityIndicator, Button, FAB, Searchbar } from 'react-native-paper';
+import DropDownPicker from "react-native-dropdown-picker";
 
 import Background from '@/components/Background';
 import WarehouseRequestCard from '@/components/WarehouseRequestCard';
@@ -14,8 +15,18 @@ export default function WarehouseRequestsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string | null>("all");
   const [statusCounts, setStatusCounts] = useState<{ [key: string]: number }>({});
+
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [statusItems, setStatusItems] = useState([
+    { label: "Tất cả", value: "all" },
+    { label: "Chờ duyệt", value: "PENDING" },
+    { label: "Đã duyệt", value: "APPROVED" },
+    { label: "Từ chối", value: "REJECTED" },
+    { label: "Đã hủy", value: "CANCELLED" },
+    { label: "Hoàn thành", value: "COMPLETED" },
+  ]);
 
   const loadRequests = useCallback(async () => {
     try {
@@ -34,7 +45,7 @@ export default function WarehouseRequestsScreen() {
         );
       }
 
-      if (selectedStatus && Array.isArray(filteredData)) {
+      if (selectedStatus && selectedStatus !== "all" && Array.isArray(filteredData)) {
         console.log('🔍 Filtering by status:', selectedStatus);
         filteredData = filteredData.filter(request => {
           const requestStatus = request.status?.toString().toUpperCase();
@@ -77,248 +88,198 @@ export default function WarehouseRequestsScreen() {
     }, [loadRequests])
   );
 
-  const statusOptions = [
-    { value: '', label: 'Tất cả' },
-    { value: 'PENDING', label: 'Chờ duyệt' },
-    { value: 'APPROVED', label: 'Đã duyệt' },
-    { value: 'REJECTED', label: 'Từ chối' },
-    { value: 'CANCELLED', label: 'Đã hủy' },
-    { value: 'COMPLETED', label: 'Hoàn thành' },
-  ];
-
   const handleRequestPress = (requestId: string) => {
     console.log('📋 Navigating to detail:', requestId);
     router.push(`/warehouse/${requestId}`);
   };
 
+  const renderItem = ({ item }: { item: WarehouseInboundRequestListItem }) => {
+    const requestId = item.inboundRequestId || item.id || item.requestId || item.warehouseInboundRequestId;
+    return (
+      <WarehouseRequestCard
+        key={requestId}
+        request={item}
+        onPress={() => {
+          console.log('📋 Clicking request with ID:', requestId);
+          if (requestId) {
+            handleRequestPress(requestId);
+          } else {
+            console.error('❌ No valid ID found for request:', item);
+          }
+        }}
+      />
+    );
+  };
+
   if (loading && !refreshing) {
     return (
-      <Background>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FD7622" />
-          <Text style={styles.loadingText}>Đang tải...</Text>
-        </View>
-      </Background>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FD7622" />
+        <Text style={styles.loadingText}>Đang tải danh sách yêu cầu...</Text>
+      </View>
     );
   }
 
   return (
-    <Background>
-      {/* Header with Action Buttons */}
-      <View style={styles.headerContainer}>
-        <Button
-          mode="text"
-          onPress={() => router.back()}
-          style={styles.headerButton}
-          textColor="#6B7280"
-          icon="arrow-left"
-        >
-          Quay lại
-        </Button>
-
-        <Button
-          mode="contained"
-          onPress={() => router.push('/warehouse/create')}
-          style={styles.createButton}
-          buttonColor="#FD7622"
-          icon="plus"
-        >
-          Tạo yêu cầu
-        </Button>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <BackButton goBack={() => router.back()} />
+        <Text style={styles.headerTitle}>Kho hàng</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.container}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
         <Searchbar
           placeholder="Tìm kiếm yêu cầu..."
           onChangeText={setSearchQuery}
           value={searchQuery}
           style={styles.searchBar}
         />
+      </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.statusFilter}
-          contentContainerStyle={styles.statusFilterContent}
-        >
-          {statusOptions.map((option) => {
-            const count = option.value ? statusCounts[option.value.toUpperCase()] || 0 : Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
-            return (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.statusChip,
-                  selectedStatus === option.value && styles.statusChipActive,
-                ]}
-                onPress={() => {
-                  console.log('🔍 Clicking status filter:', option.value, option.label);
-                  setSelectedStatus(option.value);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.statusChipText,
-                    selectedStatus === option.value && styles.statusChipTextActive,
-                  ]}
-                >
-                  {option.label} ({count})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-          {requests.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={{ fontSize: 64, color: "#9CA3AF" }}>📦</Text>
-              <Text style={styles.emptyTitle}>Chưa có yêu cầu nhập kho</Text>
-              <Text style={styles.emptySubtitle}>
-                Tạo yêu cầu nhập kho đầu tiên để bắt đầu
-              </Text>
-            </View>
-          ) : (
-            requests.map((request) => {
-              console.log('🔍 Request object in map:', request);
-              console.log('🔍 Request.id:', request.id);
-              console.log('🔍 Request.requestId:', request.requestId);
-              console.log('🔍 All request keys:', Object.keys(request));
-
-              // Sử dụng inboundRequestId (UUID) cho API call, không phải requestCode
-              const requestId = request.inboundRequestId || request.id || request.requestId || request.warehouseInboundRequestId;
-              console.log('🔍 Final requestId to use:', requestId);
-              console.log('🔍 RequestCode (for display):', request.requestCode);
-
-              return (
-                <WarehouseRequestCard
-                  key={requestId}
-                  request={request}
-                  onPress={() => {
-                    console.log('📋 Clicking request with ID:', requestId);
-                    if (requestId) {
-                      handleRequestPress(requestId);
-                    } else {
-                      console.error('❌ No valid ID found for request:', request);
-                    }
-                  }}
-                />
-              );
-            })
-          )}
-        </ScrollView>
-
-        <FAB
-          icon="plus"
-          style={styles.fab}
-          onPress={() => router.push('/warehouse/create')}
-          color="#FFFFFF"
+      {/* Filter Section */}
+      <View style={styles.filterContainer}>
+        <Text style={styles.filterLabel}>Lọc theo trạng thái:</Text>
+        <DropDownPicker
+          open={statusOpen}
+          value={selectedStatus}
+          items={statusItems}
+          setOpen={setStatusOpen}
+          setValue={setSelectedStatus}
+          setItems={setStatusItems}
+          style={styles.dropdown}
+          dropDownContainerStyle={styles.dropdownContainer}
+          placeholder="Chọn trạng thái"
+          zIndex={3000}
+          zIndexInverse={1000}
         />
       </View>
-    </Background>
+
+      {/* Content */}
+      {requests.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Không có yêu cầu nhập kho nào</Text>
+          <Text style={styles.emptySubText}>
+            {selectedStatus === "all"
+              ? "Bạn chưa có yêu cầu nhập kho nào. Hãy tạo yêu cầu đầu tiên!"
+              : `Không có yêu cầu nào với trạng thái "${selectedStatus !== "all" && statusItems.find(item => item.value === selectedStatus)?.label || "không xác định"}"`
+            }
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={requests}
+          renderItem={renderItem}
+          keyExtractor={(item) => (item.inboundRequestId || item.id || item.requestId || item.warehouseInboundRequestId)?.toString() || Math.random().toString()}
+          contentContainerStyle={styles.listContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#FD7622"]}
+              tintColor="#FD7622"
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+
+      {/* FAB for Create */}
+      <FAB
+        icon="plus"
+        style={styles.fab}
+        onPress={() => router.push('/warehouse/create')}
+        label="Tạo yêu cầu"
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  searchBar: {
+    backgroundColor: '#FFFFFF',
+  },
+  filterContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  dropdown: {
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+  },
+  dropdownContainer: {
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+  },
+  listContainer: {
+    padding: 16,
+    paddingBottom: 80,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F5F5F5',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#6B7280',
-  },
-  searchBar: {
-    margin: 16,
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
-  },
-  statusFilter: {
-    marginBottom: 8,
-  },
-  statusFilterContent: {
-    paddingHorizontal: 16,
-    gap: 6,
-  },
-  statusChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 24,
-    maxWidth: 70,
-  },
-  statusChipActive: {
-    backgroundColor: '#FD7622',
-    borderColor: '#FD7622',
-  },
-  statusChipText: {
-    fontSize: 10,
-    color: '#6B7280',
-    fontWeight: '500',
-    textAlign: 'center',
-    lineHeight: 14,
-  },
-  statusChipTextActive: {
-    color: '#FFFFFF',
-  },
-
-  content: {
-    flex: 1,
-  },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 80,
+    color: '#666',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 64,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
     paddingHorizontal: 32,
   },
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 8,
   },
-  headerButton: {
-    minWidth: 80,
-  },
-  createButton: {
-    borderRadius: 8,
-    elevation: 2,
+  emptySubText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   fab: {
     position: 'absolute',
