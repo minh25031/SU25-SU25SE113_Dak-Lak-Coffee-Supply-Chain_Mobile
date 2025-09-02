@@ -1,170 +1,466 @@
-import BackButton from "@/components/BackButton";
-import type { CropSeason } from "@/core/api/cropSeason.api";
-import { getCropSeasonById } from "@/core/api/cropSeason.api";
-import { getCropSeasonStatusLabel } from "@/core/enums/cropSeasonDetailStatus";
+import React, { useCallback, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Button, Card, Divider, Chip, FAB } from 'react-native-paper';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
-import {
-    ActivityIndicator,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-    TouchableOpacity,
-} from "react-native";
-import CropSeasonDetailItem from "./components/CropSeasonDetailItem";
+import Background from '@/components/Background';
+import BackButton from '@/components/BackButton';
+import { getCropSeasonById, CropSeason, CropSeasonStatusValue, CropSeasonStatusLabels } from '@/core/api/cropSeason.api';
+import { getCropSeasonDetailsBySeasonId, CropSeasonDetail } from '@/core/api/cropSeasonDetail.api';
 
 export default function CropSeasonDetailScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
-    const [season, setSeason] = useState<CropSeason | null>(null);
-    const [loading, setLoading] = useState(true);
+    const cropSeasonId = id as string;
 
-    const formatDate = (dateStr: string) => {
-        const date = new Date(dateStr);
-        return `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1)
-            .toString()
-            .padStart(2, "0")}/${date.getFullYear()}`;
+    const [loading, setLoading] = useState(true);
+    const [cropSeason, setCropSeason] = useState<CropSeason | null>(null);
+    const [details, setDetails] = useState<CropSeasonDetail[]>([]);
+    const [loadingDetails, setLoadingDetails] = useState(false);
+
+    const loadCropSeason = useCallback(async () => {
+        if (!cropSeasonId) return;
+
+        try {
+            setLoading(true);
+            const season = await getCropSeasonById(cropSeasonId);
+            if (season) {
+                setCropSeason(season);
+            } else {
+                Alert.alert('Lỗi', 'Không tìm thấy thông tin mùa vụ');
+                router.back();
+            }
+        } catch (error) {
+            console.error('❌ Error loading crop season:', error);
+            Alert.alert(
+                'Lỗi',
+                'Không thể tải thông tin mùa vụ. Vui lòng kiểm tra kết nối mạng và thử lại.',
+                [
+                    {
+                        text: 'Thử lại',
+                        onPress: () => loadCropSeason()
+                    },
+                    {
+                        text: 'Quay lại',
+                        style: 'cancel',
+                        onPress: () => router.back()
+                    }
+                ]
+            );
+        } finally {
+            setLoading(false);
+        }
+    }, [cropSeasonId, router]);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadCropSeason();
+        }, [loadCropSeason])
+    );
+
+    const handleEdit = () => {
+        router.push(`/cropseason/${cropSeasonId}/edit`);
     };
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const res = await getCropSeasonById(id as string);
-                setSeason(res?.data || null);
-            } catch (err) {
-                console.error("Lỗi khi tải mùa vụ:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [id]);
+    const handleViewProgress = () => {
+        router.push(`/cropseason/${cropSeasonId}/progress`);
+    };
+
+    const getStatusColor = (status: CropSeasonStatusValue) => {
+        switch (status) {
+            case CropSeasonStatusValue.Active:
+                return '#10B981';
+            case CropSeasonStatusValue.Paused:
+                return '#F59E0B';
+            case CropSeasonStatusValue.Completed:
+                return '#3B82F6';
+            case CropSeasonStatusValue.Cancelled:
+                return '#EF4444';
+            default:
+                return '#6B7280';
+        }
+    };
+
+    const getStatusBackgroundColor = (status: CropSeasonStatusValue) => {
+        switch (status) {
+            case CropSeasonStatusValue.Active:
+                return '#D1FAE5';
+            case CropSeasonStatusValue.Paused:
+                return '#FEF3C7';
+            case CropSeasonStatusValue.Completed:
+                return '#DBEAFE';
+            case CropSeasonStatusValue.Cancelled:
+                return '#FEE2E2';
+            default:
+                return '#F3F4F6';
+        }
+    };
+
+    const formatDate = (dateString: string) => {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('vi-VN');
+        } catch {
+            return 'N/A';
+        }
+    };
 
     if (loading) {
         return (
-            <View style={styles.centered}>
-                <ActivityIndicator size="large" color="#FD7622" />
-            </View>
+            <Background>
+                <View style={styles.loadingContainer}>
+                    <Text>Đang tải...</Text>
+                </View>
+            </Background>
         );
     }
 
-    if (!season) {
+    if (!cropSeason) {
         return (
-            <View style={styles.centered}>
-                <Text style={{ color: "#6B7280" }}>Không tìm thấy mùa vụ.</Text>
-            </View>
+            <Background>
+                <View style={styles.errorContainer}>
+                    <Text>Không tìm thấy thông tin mùa vụ</Text>
+                    <Text style={{ marginTop: 8, color: '#6B7280' }}>
+                        Vui lòng thử lại sau
+                    </Text>
+                </View>
+            </Background>
         );
     }
+
+    const canEdit = cropSeason.status !== CropSeasonStatusValue.Completed &&
+        cropSeason.status !== CropSeasonStatusValue.Cancelled;
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <BackButton goBack={() => router.back()} />
-            <Text style={styles.title}>{season.seasonName}</Text>
+        <Background>
+            <View style={styles.container}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <BackButton goBack={() => router.back()} />
+                    <Text style={styles.headerTitle}>Chi tiết mùa vụ</Text>
+                    <View style={{ width: 40 }} />
+                </View>
 
-            <View style={styles.infoBox}>
-                <InfoRow label="Thời gian:" value={`${formatDate(season.startDate)} → ${formatDate(season.endDate)}`} />
-                <InfoRow label="Diện tích:" value={`${season.area} ha`} />
-                <InfoRow
-                    label="Nông dân:"
-                    value={season.farmerName}
-                    icon={<Text style={{ fontSize: 16, color: "#6F4E37" }}>👤</Text>}
+                <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                    {/* Basic Info Card */}
+                    <Card style={styles.card}>
+                        <Card.Content>
+                            <View style={styles.titleRow}>
+                                <Text style={styles.seasonName}>{cropSeason.seasonName}</Text>
+                                <Chip
+                                    mode="outlined"
+                                    style={[
+                                        styles.statusChip,
+                                        {
+                                            backgroundColor: getStatusBackgroundColor(cropSeason.status),
+                                            borderColor: getStatusColor(cropSeason.status)
+                                        }
+                                    ]}
+                                    textStyle={{ color: getStatusColor(cropSeason.status) }}
+                                >
+                                    {CropSeasonStatusLabels[cropSeason.status]}
+                                </Chip>
+                            </View>
+
+                            {cropSeason.description && cropSeason.description.trim() !== '' && (
+                                <Text style={styles.description}>{cropSeason.description}</Text>
+                            )}
+
+                            <Divider style={styles.divider} />
+
+                            <View style={styles.infoGrid}>
+                                <View style={styles.infoItem}>
+                                    <MaterialCommunityIcons name="calendar-start" size={20} color="#6B7280" />
+                                    <Text style={styles.infoLabel}>Bắt đầu</Text>
+                                    <Text style={styles.infoValue}>{formatDate(cropSeason.startDate)}</Text>
+                                </View>
+
+                                <View style={styles.infoItem}>
+                                    <MaterialCommunityIcons name="calendar-end" size={20} color="#6B7280" />
+                                    <Text style={styles.infoLabel}>Kết thúc</Text>
+                                    <Text style={styles.infoValue}>{formatDate(cropSeason.endDate)}</Text>
+                                </View>
+
+                                {cropSeason.area && cropSeason.area > 0 && (
+                                    <View style={styles.infoItem}>
+                                        <MaterialCommunityIcons name="map-marker" size={20} color="#6B7280" />
+                                        <Text style={styles.infoLabel}>Diện tích</Text>
+                                        <Text style={styles.infoValue}>{cropSeason.area} ha</Text>
+                                    </View>
+                                )}
+
+                                <View style={styles.infoItem}>
+                                    <MaterialCommunityIcons name="account" size={20} color="#6B7280" />
+                                    <Text style={styles.infoLabel}>Nông dân</Text>
+                                    <Text style={styles.infoValue}>{cropSeason.farmerName || 'N/A'}</Text>
+                                </View>
+                            </View>
+
+                            {cropSeason.note && cropSeason.note.trim() !== '' && (
+                                <>
+                                    <Divider style={styles.divider} />
+                                    <View style={styles.noteContainer}>
+                                        <MaterialCommunityIcons name="note-text" size={20} color="#6B7280" />
+                                        <Text style={styles.noteLabel}>Ghi chú:</Text>
+                                        <Text style={styles.noteText}>{cropSeason.note}</Text>
+                                    </View>
+                                </>
+                            )}
+                        </Card.Content>
+                    </Card>
+
+                    {/* Details Card */}
+                    {cropSeason.details && cropSeason.details.length > 0 && (
+                        <Card style={styles.card}>
+                            <Card.Content>
+                                <Text style={styles.cardTitle}>Chi tiết vùng trồng</Text>
+                                <Divider style={styles.divider} />
+
+                                {cropSeason.details.map((detail, index) => (
+                                    <View key={detail.detailId} style={styles.detailItem}>
+                                        <View style={styles.detailHeader}>
+                                            <Text style={styles.detailName}>{detail.typeName || 'N/A'}</Text>
+                                            <Text style={styles.detailArea}>{detail.areaAllocated || 0} ha</Text>
+                                        </View>
+
+                                        <View style={styles.detailInfo}>
+                                            <Text style={styles.detailText}>
+                                                Dự kiến thu hoạch: {formatDate(detail.expectedHarvestStart)} - {formatDate(detail.expectedHarvestEnd)}
+                                            </Text>
+                                            <Text style={styles.detailText}>
+                                                Sản lượng dự kiến: {detail.estimatedYield || 0} kg
+                                            </Text>
+                                            {detail.actualYield && (
+                                                <Text style={styles.detailText}>
+                                                    Sản lượng thực tế: {detail.actualYield} kg
+                                                </Text>
+                                            )}
+                                            <Text style={styles.detailText}>
+                                                Chất lượng: {detail.plannedQuality || 'N/A'}
+                                            </Text>
+                                        </View>
+
+                                        {/* Edit Button for Detail */}
+                                        <View style={styles.detailActions}>
+                                            <Button
+                                                mode="outlined"
+                                                onPress={() => router.push(`/cropseason/${cropSeasonId}/details/${detail.detailId}/edit`)}
+                                                style={styles.editDetailButton}
+                                                icon={() => <MaterialCommunityIcons name="pencil" size={16} color="#6B7280" />}
+                                            >
+                                                Sửa
+                                            </Button>
+                                        </View>
+                                    </View>
+                                ))}
+                            </Card.Content>
+                        </Card>
+                    )}
+
+                    {/* Actions Card */}
+                    <Card style={styles.card}>
+                        <Card.Content>
+                            <Text style={styles.cardTitle}>Hành động</Text>
+                            <Divider style={styles.divider} />
+
+                            <View style={styles.actionButtons}>
+                                <Button
+                                    mode="contained"
+                                    onPress={handleViewProgress}
+                                    style={[styles.actionButton, { backgroundColor: '#3B82F6' }]}
+                                    icon={() => <MaterialCommunityIcons name="chart-line" size={20} color="#FFFFFF" />}
+                                >
+                                    Xem tiến độ
+                                </Button>
+
+                                {canEdit && (
+                                    <Button
+                                        mode="outlined"
+                                        onPress={handleEdit}
+                                        style={[styles.actionButton, { borderColor: '#F59E0B' }]}
+                                        labelStyle={{ color: '#F59E0B' }}
+                                        icon={() => <MaterialCommunityIcons name="pencil" size={20} color="#F59E0B" />}
+                                    >
+                                        Sửa mùa vụ
+                                    </Button>
+                                )}
+                            </View>
+                        </Card.Content>
+                    </Card>
+                </ScrollView>
+
+                {/* FAB for Quick Actions */}
+                <FAB
+                    icon="plus"
+                    style={styles.fab}
+                    onPress={() => router.push(`/cropseason/${cropSeasonId}/progress/create`)}
+                    label="Thêm tiến độ"
                 />
-                <InfoRow label="Mã đăng ký:" value={season.registrationCode} />
-                <InfoRow label="Ghi chú:" value={season.note || "(Không có)"} />
-                <InfoRow label="Trạng thái:" value={getCropSeasonStatusLabel(season.status)} highlight />
             </View>
-
-            <Text style={styles.subTitle}>🌱 Vùng trồng</Text>
-
-            {season.details.length === 0 ? (
-                <Text style={styles.empty}>Chưa có vùng trồng nào.</Text>
-            ) : (
-                season.details.map((detail, index) => (
-                    <View key={detail.detailId} style={styles.detailItemWrapper}>
-                        <CropSeasonDetailItem index={index} {...detail} />
-                        <TouchableOpacity
-                            style={styles.progressButton}
-                            onPress={() => router.push(`/cropseason/${id}/progress?detailId=${detail.detailId}`)}
-                        >
-                            <Text style={styles.progressButtonText}>⏰ Xem tiến độ</Text>
-                        </TouchableOpacity>
-                    </View>
-                ))
-            )}
-        </ScrollView>
+        </Background>
     );
 }
 
-const InfoRow = ({
-    label,
-    value,
-    icon,
-    highlight = false,
-}: {
-    label: string;
-    value: string;
-    icon?: React.ReactNode;
-    highlight?: boolean;
-}) => (
-    <View style={{ marginTop: 10 }}>
-        <Text style={styles.label}>{label}</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
-            {icon && <View style={{ marginRight: 6 }}>{icon}</View>}
-            <Text style={[styles.value, highlight && { color: "#FD7622", fontWeight: "bold" }]}>
-                {value}
-            </Text>
-        </View>
-    </View>
-);
-
 const styles = StyleSheet.create({
-    container: { padding: 16, backgroundColor: "#FEFAF4", flexGrow: 1 },
-    centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
-    title: { fontSize: 22, fontWeight: "bold", color: "#D74F0F", marginBottom: 12 },
-    infoBox: {
-        backgroundColor: "#fff",
-        padding: 16,
-        borderRadius: 16,
-        elevation: 2,
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        marginBottom: 24,
+    container: {
+        flex: 1,
     },
-    label: { fontSize: 14, fontWeight: "600", color: "#6F4E37" },
-    value: { fontSize: 16, color: "#1F2937" },
-    subTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#374151",
-        marginBottom: 12,
-    },
-    empty: {
-        fontStyle: "italic",
-        color: "#9CA3AF",
-        marginBottom: 12,
-    },
-    detailItemWrapper: {
-        marginBottom: 12,
-    },
-    progressButton: {
-        flexDirection: 'row',
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#FEF3C7',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 8,
-        marginTop: 8,
-        borderWidth: 1,
-        borderColor: '#FDE68A',
     },
-    progressButtonText: {
-        fontSize: 14,
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        backgroundColor: '#FFFFFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
+    },
+    headerTitle: {
+        fontSize: 18,
         fontWeight: '600',
-        color: '#D97706',
-        marginLeft: 8,
+        color: '#111827',
+    },
+    content: {
+        flex: 1,
+        padding: 16,
+    },
+    card: {
+        marginBottom: 16,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 12,
+    },
+    seasonName: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#111827',
+        flex: 1,
+        marginRight: 12,
+    },
+    statusChip: {
+        alignSelf: 'flex-start',
+    },
+    description: {
+        fontSize: 14,
+        color: '#6B7280',
+        lineHeight: 20,
+        marginBottom: 16,
+    },
+    divider: {
+        marginVertical: 16,
+    },
+    infoGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 16,
+    },
+    infoItem: {
+        flex: 1,
+        minWidth: '45%',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 8,
+    },
+    infoLabel: {
+        fontSize: 12,
+        color: '#6B7280',
+        marginTop: 4,
+        marginBottom: 2,
+    },
+    infoValue: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#111827',
+        textAlign: 'center',
+    },
+    noteContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+    },
+    noteLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#374151',
+        marginRight: 8,
+    },
+    noteText: {
+        fontSize: 14,
+        color: '#6B7280',
+        flex: 1,
+        lineHeight: 20,
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#111827',
+        marginBottom: 8,
+    },
+    detailItem: {
+        marginBottom: 16,
+        padding: 12,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 8,
+    },
+    detailHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    detailName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#111827',
+    },
+    detailArea: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#6B7280',
+    },
+    detailInfo: {
+        gap: 4,
+    },
+    detailText: {
+        fontSize: 14,
+        color: '#6B7280',
+    },
+    detailActions: {
+        marginTop: 12,
+        alignItems: 'flex-end',
+    },
+    editDetailButton: {
+        marginTop: 8,
+        backgroundColor: '#E0E7FF',
+        borderColor: '#C7D2FE',
+        borderWidth: 1,
+    },
+    actionButtons: {
+        gap: 12,
+    },
+    actionButton: {
+        marginBottom: 8,
+    },
+    fab: {
+        position: 'absolute',
+        margin: 16,
+        right: 0,
+        bottom: 0,
+        backgroundColor: '#FD7622',
     },
 });

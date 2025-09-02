@@ -8,8 +8,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
+
 
 import BackButton from '@/components/BackButton';
 import { CropStageListItem, getAllCropStages } from '@/core/api/cropStage.api';
@@ -123,7 +122,7 @@ export default function CropStagesScreen() {
 
     useEffect(() => {
         fetchStages();
-    }, []);
+    }, [fetchStages]);
 
     const renderStageItem = ({ item, index }: { item: CropStageListItem; index: number }) => (
         <StageItem item={item} index={index} />

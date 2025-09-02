@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Card, Badge, FAB, Searchbar, ActivityIndicator, Button, Chip } from 'react-native-paper';
+import { Card, FAB, Searchbar, ActivityIndicator, Button, Chip } from 'react-native-paper';
 
 import Background from '@/components/Background';
 import BackButton from '@/components/BackButton';
 import { processingAPI, ProcessingBatch } from '@/core/api/processing.api';
-
-const { width } = Dimensions.get('window');
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -101,12 +99,12 @@ export default function ProcessingBatchesScreen() {
 
   useEffect(() => {
     let filtered = batches;
-    
+
     // Áp dụng filter theo trạng thái
     if (selectedFilter !== 'all') {
       filtered = filtered.filter(batch => batch.status === selectedFilter);
     }
-    
+
     // Áp dụng search
     if (searchQuery.trim() !== '') {
       filtered = filtered.filter(batch =>
@@ -115,7 +113,7 @@ export default function ProcessingBatchesScreen() {
         batch.cropSeasonName.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
     setFilteredBatches(filtered);
   }, [searchQuery, batches, selectedFilter]);
 
@@ -129,12 +127,12 @@ export default function ProcessingBatchesScreen() {
       'Bạn muốn tạo lô sơ chế mới cho vụ mùa này?',
       [
         { text: 'Hủy', style: 'cancel' },
-        { 
-          text: 'Tạo mới', 
+        {
+          text: 'Tạo mới',
           onPress: () => {
             // TODO: Navigate to create page when available
             Alert.alert(
-              'Thông báo', 
+              'Thông báo',
               'Tính năng tạo lô sơ chế sẽ được phát triển trong phiên bản tiếp theo. Vui lòng liên hệ nhân viên hỗ trợ.',
               [{ text: 'Đã hiểu', style: 'default' }]
             );
@@ -154,8 +152,8 @@ export default function ProcessingBatchesScreen() {
       'Bạn có chắc chắn muốn xóa lô sơ chế này? Hành động này không thể hoàn tác.',
       [
         { text: 'Hủy', style: 'cancel' },
-        { 
-          text: 'Xóa', 
+        {
+          text: 'Xóa',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -177,11 +175,11 @@ export default function ProcessingBatchesScreen() {
       'Bạn muốn cập nhật tiến độ xử lý cho lô này?',
       [
         { text: 'Hủy', style: 'cancel' },
-        { 
-          text: 'Cập nhật', 
+        {
+          text: 'Cập nhật',
           onPress: () => {
             Alert.alert(
-              'Thông báo', 
+              'Thông báo',
               'Tính năng cập nhật tiến độ sẽ được phát triển trong phiên bản tiếp theo.',
               [{ text: 'Đã hiểu', style: 'default' }]
             );
@@ -264,8 +262,8 @@ export default function ProcessingBatchesScreen() {
         )}
 
         {/* Filter Chips */}
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filterContainer}
           contentContainerStyle={styles.filterContent}
@@ -319,8 +317,8 @@ export default function ProcessingBatchesScreen() {
           <View style={styles.errorContainer}>
             <MaterialCommunityIcons name="wifi-off" size={32} color="#DC2626" />
             <Text style={styles.errorText}>{error}</Text>
-            <Button 
-              mode="contained" 
+            <Button
+              mode="contained"
               onPress={fetchBatches}
               style={styles.retryButton}
               buttonColor="#DC2626"
@@ -332,8 +330,8 @@ export default function ProcessingBatchesScreen() {
         )}
 
         {/* Batches List */}
-        <ScrollView 
-          style={styles.batchesList} 
+        <ScrollView
+          style={styles.batchesList}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FD7622']} />
@@ -347,7 +345,7 @@ export default function ProcessingBatchesScreen() {
               </Text>
               <Text style={styles.emptySubtitle}>
                 {searchQuery || selectedFilter !== 'all'
-                  ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm' 
+                  ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm'
                   : 'Bắt đầu tạo lô sơ chế đầu tiên của bạn để theo dõi quy trình xử lý cà phê'
                 }
               </Text>
@@ -376,10 +374,10 @@ export default function ProcessingBatchesScreen() {
                         <Text style={styles.batchCode}>{batch.batchCode}</Text>
                       </View>
                       <View style={styles.statusContainer}>
-                        <MaterialCommunityIcons 
-                          name={getStatusIcon(batch.status) as any} 
-                          size={16} 
-                          color={getStatusColor(batch.status)} 
+                        <MaterialCommunityIcons
+                          name={getStatusIcon(batch.status) as any}
+                          size={16}
+                          color={getStatusColor(batch.status)}
                         />
                         <Text style={[styles.statusText, { color: getStatusColor(batch.status) }]}>
                           {getStatusText(batch.status)}
@@ -444,14 +442,14 @@ export default function ProcessingBatchesScreen() {
                       <Text style={styles.progressPercent}>{batch.progress}%</Text>
                     </View>
                     <View style={styles.progressBar}>
-                      <View 
+                      <View
                         style={[
-                          styles.progressFill, 
-                          { 
+                          styles.progressFill,
+                          {
                             width: `${batch.progress}%`,
                             backgroundColor: getStatusColor(batch.status)
                           }
-                        ]} 
+                        ]}
                       />
                     </View>
                     <Text style={styles.progressText}>

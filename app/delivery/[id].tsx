@@ -1,18 +1,16 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button, Card, Divider, TextInput } from 'react-native-paper';
+import React, { useCallback, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Button, Card, TextInput, Divider } from 'react-native-paper';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
 
 import Background from '@/components/Background';
 import BackButton from '@/components/BackButton';
-import { 
-  getShipmentById, 
-  updateShipmentStatus, 
-  confirmDelivery,
-  Shipment 
+import {
+  getShipmentById,
+  updateShipmentStatus,
+  confirmDelivery
 } from '@/core/api/delivery.api';
 import { useDeliveryStore } from '@/stores/deliveryStore';
 
@@ -28,7 +26,7 @@ export default function ShipmentDetailScreen() {
 
   const loadShipment = useCallback(async () => {
     if (!shipmentId) return;
-    
+
     try {
       setLoading(true);
       const shipment = await getShipmentById(shipmentId);
@@ -50,6 +48,12 @@ export default function ShipmentDetailScreen() {
   const handleUpdateStatus = async (newStatus: string) => {
     if (!currentShipment) return;
 
+    // Validation: Kiểm tra xem có thể chuyển sang trạng thái mới không
+    if (!canTransitionToStatus(currentShipment.deliveryStatus, newStatus)) {
+      Alert.alert('Lỗi', 'Không thể chuyển sang trạng thái này');
+      return;
+    }
+
     try {
       setUpdating(true);
       await updateShipmentStatus(shipmentId, {
@@ -64,9 +68,20 @@ export default function ShipmentDetailScreen() {
 
       Alert.alert('Thành công', 'Đã cập nhật trạng thái giao hàng');
       setNote('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error updating status:', error);
-      Alert.alert('Lỗi', 'Không thể cập nhật trạng thái');
+
+      // Xử lý lỗi cụ thể
+      if (error.response?.status === 409) {
+        Alert.alert(
+          'Lỗi xung đột',
+          'Không thể cập nhật trạng thái. Có thể dữ liệu đã bị thay đổi bởi người khác. Vui lòng làm mới trang và thử lại.'
+        );
+      } else if (error.response?.status === 400) {
+        Alert.alert('Lỗi dữ liệu', 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
+      } else {
+        Alert.alert('Lỗi', 'Không thể cập nhật trạng thái. Vui lòng thử lại sau.');
+      }
     } finally {
       setUpdating(false);
     }
@@ -91,22 +106,33 @@ export default function ShipmentDetailScreen() {
               });
 
               // Update local state
-              const updatedShipment = { 
-                ...currentShipment, 
+              const updatedShipment = {
+                ...currentShipment,
                 deliveryStatus: 'Delivered',
                 receivedAt: new Date().toISOString()
               };
               setCurrentShipment(updatedShipment);
-              updateShipmentInList(shipmentId, { 
+              updateShipmentInList(shipmentId, {
                 deliveryStatus: 'Delivered',
                 receivedAt: new Date().toISOString()
               });
 
               Alert.alert('Thành công', 'Đã xác nhận giao hàng thành công');
               setNote('');
-            } catch (error) {
+            } catch (error: any) {
               console.error('❌ Error confirming delivery:', error);
-              Alert.alert('Lỗi', 'Không thể xác nhận giao hàng');
+
+              // Xử lý lỗi cụ thể
+              if (error.response?.status === 409) {
+                Alert.alert(
+                  'Lỗi xung đột',
+                  'Không thể xác nhận giao hàng. Có thể dữ liệu đã bị thay đổi bởi người khác. Vui lòng làm mới trang và thử lại.'
+                );
+              } else if (error.response?.status === 400) {
+                Alert.alert('Lỗi dữ liệu', 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.');
+              } else {
+                Alert.alert('Lỗi', 'Không thể xác nhận giao hàng. Vui lòng thử lại sau.');
+              }
             } finally {
               setUpdating(false);
             }
@@ -148,6 +174,20 @@ export default function ShipmentDetailScreen() {
     }
   };
 
+  // Validation: Kiểm tra xem có thể chuyển sang trạng thái mới không
+  const canTransitionToStatus = (currentStatus: string, newStatus: string): boolean => {
+    const validTransitions: Record<string, string[]> = {
+      'Pending': ['InTransit', 'Canceled'],
+      'InTransit': ['Delivered', 'Failed'],
+      'Failed': ['Returned', 'InTransit'], // Có thể thử giao lại
+      'Returned': ['InTransit'], // Có thể giao lại sau khi hoàn trả
+      'Delivered': [], // Không thể thay đổi sau khi đã giao
+      'Canceled': [] // Không thể thay đổi sau khi đã hủy
+    };
+
+    return validTransitions[currentStatus]?.includes(newStatus) || false;
+  };
+
   if (loading) {
     return (
       <Background>
@@ -172,7 +212,6 @@ export default function ShipmentDetailScreen() {
   }
 
   const canUpdateStatus = currentShipment.deliveryStatus !== 'Delivered';
-  const canConfirmDelivery = currentShipment.deliveryStatus === 'InTransit';
 
   return (
     <Background>
@@ -181,7 +220,17 @@ export default function ShipmentDetailScreen() {
         <View style={styles.header}>
           <BackButton goBack={() => router.back()} />
           <Text style={styles.headerTitle}>Chi tiết chuyến giao</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity
+            onPress={loadShipment}
+            style={styles.refreshButton}
+            disabled={loading}
+          >
+            <MaterialCommunityIcons
+              name="refresh"
+              size={24}
+              color={loading ? '#9CA3AF' : '#3B82F6'}
+            />
+          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content}>
@@ -191,11 +240,11 @@ export default function ShipmentDetailScreen() {
               <View style={styles.shipmentHeader}>
                 <Text style={styles.shipmentCode}>{currentShipment.shipmentCode}</Text>
                 <View style={[
-                  styles.statusBadge, 
+                  styles.statusBadge,
                   { backgroundColor: getStatusColor(currentShipment.deliveryStatus) + '20' }
                 ]}>
                   <Text style={[
-                    styles.statusText, 
+                    styles.statusText,
                     { color: getStatusColor(currentShipment.deliveryStatus) }
                   ]}>
                     {getStatusText(currentShipment.deliveryStatus)}
@@ -268,8 +317,8 @@ export default function ShipmentDetailScreen() {
                   )}
                 </View>
               )) || (
-                <Text style={styles.detailNote}>Không có chi tiết sản phẩm</Text>
-              )}
+                  <Text style={styles.detailNote}>Không có chi tiết sản phẩm</Text>
+                )}
             </Card.Content>
           </Card>
 
@@ -461,5 +510,10 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     marginBottom: 8,
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
   },
 });
