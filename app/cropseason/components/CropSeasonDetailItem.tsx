@@ -1,6 +1,6 @@
 // CropSeasonDetailItem.tsx
 import { getCropSeasonDetailStatusColor, getCropSeasonDetailStatusLabel } from "@/core/enums/cropSeasonDetailStatus";
-// import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -40,33 +40,33 @@ const CropSeasonDetailItem: React.FC<CropSeasonDetailItemProps> = ({
             </Text>
 
             <View style={styles.detailRow}>
-                <Text style={{ fontSize: 16, color: "#3B82F6" }}>📏</Text>
+                <MaterialCommunityIcons name="ruler" size={16} color="#3B82F6" />
                 <Text style={styles.detailItem}>Diện tích: {areaAllocated} ha</Text>
             </View>
 
             <View style={styles.detailRow}>
-                <Text style={{ fontSize: 16, color: "#F59E0B" }}>📅</Text>
+                <MaterialCommunityIcons name="calendar" size={16} color="#F59E0B" />
                 <Text style={styles.detailItem}>
                     Thu hoạch: {formatDate(expectedHarvestStart)} → {formatDate(expectedHarvestEnd)}
                 </Text>
             </View>
 
             <View style={styles.detailRow}>
-                <Text style={{ fontSize: 16, color: "#FD7622" }}>🌽</Text>
+                <MaterialCommunityIcons name="grain" size={16} color="#FD7622" />
                 <Text style={styles.detailItem}>Năng suất ước tính: {estimatedYield} kg</Text>
             </View>
 
             <View style={styles.detailRow}>
-                <Text style={{ fontSize: 16, color: "#8B5CF6" }}>🏆</Text>
+                <MaterialCommunityIcons name="trophy" size={16} color="#8B5CF6" />
                 <Text style={styles.detailItem}>Chất lượng dự kiến: {plannedQuality}</Text>
             </View>
 
             <View style={styles.detailRow}>
-                <Text
-                    style={{ fontSize: 16, color: getCropSeasonDetailStatusColor(status) }}
-                >
-                    🏷️
-                </Text>
+                <MaterialCommunityIcons
+                    name="tag"
+                    size={16}
+                    color={getCropSeasonDetailStatusColor(status)}
+                />
                 <Text
                     style={[
                         styles.detailItem,

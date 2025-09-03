@@ -329,7 +329,7 @@ export default function CreateCropProgressScreen() {
                     {/* Season Info Card */}
                     <Card style={styles.infoCard}>
                         <Card.Content>
-                            <Text style={styles.infoTitle}>📋 Thông tin mùa vụ</Text>
+                            <Text style={styles.infoTitle}>Thông tin mùa vụ</Text>
                             <Divider style={styles.divider} />
                             <Text style={styles.seasonName}>{cropSeason.seasonName}</Text>
                             <Text style={styles.seasonInfo}>
@@ -337,6 +337,40 @@ export default function CreateCropProgressScreen() {
                             </Text>
                         </Card.Content>
                     </Card>
+
+                    {/* Selected Detail Info Card */}
+                    {selectedDetailIdState && cropSeason.details && (
+                        <Card style={styles.infoCard}>
+                            <Card.Content>
+                                <Text style={styles.infoTitle}>Vùng trồng được chọn</Text>
+                                <Divider style={styles.divider} />
+                                {(() => {
+                                    const selectedDetail = cropSeason.details.find(d => d.detailId === selectedDetailIdState);
+                                    if (selectedDetail) {
+                                        return (
+                                            <>
+                                                <Text style={styles.detailName}>{selectedDetail.typeName || 'N/A'}</Text>
+                                                <Text style={styles.detailInfo}>
+                                                    Diện tích: {selectedDetail.areaAllocated || 0} ha
+                                                </Text>
+                                                {selectedDetail.expectedHarvestStart && (
+                                                    <Text style={styles.detailInfo}>
+                                                        Thu hoạch dự kiến: {formatDate(new Date(selectedDetail.expectedHarvestStart))} - {formatDate(new Date(selectedDetail.expectedHarvestEnd))}
+                                                    </Text>
+                                                )}
+                                                {selectedDetail.estimatedYield && (
+                                                    <Text style={styles.detailInfo}>
+                                                        Sản lượng dự kiến: {selectedDetail.estimatedYield} kg
+                                                    </Text>
+                                                )}
+                                            </>
+                                        );
+                                    }
+                                    return <Text style={styles.detailInfo}>Không tìm thấy thông tin vùng trồng</Text>;
+                                })()}
+                            </Card.Content>
+                        </Card>
+                    )}
 
                     {/* Form Card */}
                     <Card style={styles.card}>
@@ -386,7 +420,7 @@ export default function CreateCropProgressScreen() {
                                     )}
                                     {existingProgress.length > 0 && (
                                         <Text style={styles.progressInfo}>
-                                            📊 Đã hoàn thành {existingProgress.length} giai đoạn
+                                            Đã hoàn thành {existingProgress.length} giai đoạn
                                         </Text>
                                     )}
                                 </View>
@@ -545,36 +579,6 @@ export default function CreateCropProgressScreen() {
                         </Card.Content>
                     </Card>
 
-                    {/* Selected Detail Info */}
-                    {selectedDetailIdState && cropSeason.details && (
-                        <Card style={styles.infoCard}>
-                            <Card.Content>
-                                <Text style={styles.infoTitle}>📋 Thông tin vùng trồng đã chọn</Text>
-                                <Divider style={styles.divider} />
-
-                                {(() => {
-                                    const selectedDetail = cropSeason.details.find(d => d.detailId === selectedDetailIdState);
-                                    if (!selectedDetail) return null;
-
-                                    return (
-                                        <View style={styles.detailInfo}>
-                                            <Text style={styles.detailName}>{selectedDetail.typeName}</Text>
-                                            <Text style={styles.detailText}>
-                                                Diện tích: {selectedDetail.areaAllocated} ha
-                                            </Text>
-                                            <Text style={styles.detailText}>
-                                                Sản lượng dự kiến: {selectedDetail.estimatedYield} kg
-                                            </Text>
-                                            <Text style={styles.detailText}>
-                                                Chất lượng: {selectedDetail.plannedQuality}
-                                            </Text>
-                                        </View>
-                                    );
-                                })()}
-                            </Card.Content>
-                        </Card>
-                    )}
-
 
                 </ScrollView>
 
@@ -707,12 +711,15 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     detailInfo: {
-        gap: 8,
+        fontSize: 14,
+        color: '#6B7280',
+        marginTop: 4,
     },
     detailName: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#0C4A6E',
+        color: '#111827',
+        marginBottom: 8,
     },
     detailText: {
         fontSize: 14,

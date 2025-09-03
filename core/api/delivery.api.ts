@@ -14,7 +14,18 @@ export interface Shipment {
   deliveryStatus: string;
   receivedAt?: string;
   createdAt: string;
-  updatedAt: string;
+  createdByName?: string;
+  
+  // Thông tin kho (có thể có nhiều kho)
+  warehouses: WarehouseInfo[];
+  
+  // Thông tin bên nhận hàng
+  buyerCompanyName?: string;
+  buyerContactPerson?: string;
+  buyerCompanyAddress?: string;
+  buyerPhone?: string;
+  buyerEmail?: string;
+  
   shipmentDetails: ShipmentDetail[];
 }
 
@@ -269,4 +280,15 @@ export async function getDeliveryHistory(
     console.error('❌ Error fetching delivery history:', error);
     throw error;
   }
+}
+
+// Interface cho thông tin kho
+export interface WarehouseInfo {
+  warehouseId: string;
+  warehouseCode: string;
+  name: string;
+  location: string;
+  capacity?: number;
+  createdAt: string;
+  updatedAt: string;
 }

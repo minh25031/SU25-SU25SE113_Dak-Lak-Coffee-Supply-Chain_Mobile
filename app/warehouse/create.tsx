@@ -45,13 +45,13 @@ export default function CreateWarehouseRequestScreen() {
 
     try {
       setLoading(true);
-             await createWarehouseInboundRequest({
-         batchId: selectedBatch.batchId,
-         requestedQuantity: parseFloat(quantity),
-         preferredDeliveryDate: format(preferredDeliveryDate, 'yyyy-MM-dd'),
-         note: note || undefined,
-       });
-      
+      await createWarehouseInboundRequest({
+        batchId: selectedBatch.batchId,
+        requestedQuantity: parseFloat(quantity),
+        preferredDeliveryDate: format(preferredDeliveryDate, 'yyyy-MM-dd'),
+        note: note || undefined,
+      });
+
       alert('Tạo yêu cầu nhập kho thành công!');
       router.back();
     } catch (error: any) {
@@ -78,12 +78,12 @@ export default function CreateWarehouseRequestScreen() {
   return (
     <Background>
       <Header title="Tạo yêu cầu nhập kho" showBack />
-      
+
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {/* Info Card */}
         <Card style={styles.infoCard}>
           <Card.Content>
-            <Text style={styles.infoTitle}>📋 Hướng dẫn</Text>
+            <Text style={styles.infoTitle}>Hướng dẫn</Text>
             <View style={styles.infoList}>
               <Text style={styles.infoItem}>• Chọn lô xử lý đã hoàn tất</Text>
               <Text style={styles.infoItem}>• Nhập số lượng cần nhập kho</Text>
@@ -96,8 +96,8 @@ export default function CreateWarehouseRequestScreen() {
         {/* Main Form */}
         <Card style={styles.card}>
           <Card.Content>
-            <Text style={styles.sectionTitle}>📦 Thông tin yêu cầu nhập kho</Text>
-            
+            <Text style={styles.sectionTitle}>Thông tin yêu cầu nhập kho</Text>
+
             {/* Số lượng */}
             <Text style={styles.label}>⚖️ Số lượng (kg) *</Text>
             <TextInput
@@ -107,10 +107,10 @@ export default function CreateWarehouseRequestScreen() {
               placeholder="Nhập số lượng cần nhập kho"
               style={styles.input}
             />
-                         <Text style={styles.helperText}>Nhập số lượng bạn muốn nhập kho</Text>
+            <Text style={styles.helperText}>Nhập số lượng bạn muốn nhập kho</Text>
 
             {/* Ngày giao */}
-            <Text style={styles.label}>📅 Ngày giao dự kiến *</Text>
+            <Text style={styles.label}>Ngày giao dự kiến *</Text>
             <Button
               mode="outlined"
               onPress={() => setShowDeliveryDatePicker(true)}
@@ -122,7 +122,7 @@ export default function CreateWarehouseRequestScreen() {
             <Text style={styles.helperText}>Chọn ngày từ hôm nay trở đi</Text>
 
             {/* Ghi chú */}
-            <Text style={styles.label}>📝 Ghi chú</Text>
+            <Text style={styles.label}>Ghi chú</Text>
             <TextInput
               value={note}
               onChangeText={setNote}
@@ -134,7 +134,7 @@ export default function CreateWarehouseRequestScreen() {
             <Text style={styles.helperText}>Mô tả chi tiết về yêu cầu nếu cần</Text>
 
             {/* Chọn lô xử lý */}
-            <Text style={styles.label}>☕ Chọn lô xử lý *</Text>
+            <Text style={styles.label}>Chọn lô xử lý *</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.batchContainer}>
               {batches.map((batch) => (
                 <Chip
@@ -152,10 +152,10 @@ export default function CreateWarehouseRequestScreen() {
 
             {selectedBatch && (
               <View style={styles.batchInfo}>
-                <Text style={styles.batchInfoText}>📋 Mã lô: {selectedBatch.batchCode}</Text>
-                <Text style={styles.batchInfoText}>🌱 Loại cà phê: {selectedBatch.typeName || 'N/A'}</Text>
-                <Text style={styles.batchInfoText}>📊 Số lượng đã xử lý: {selectedBatch.totalOutputQuantity} kg</Text>
-                <Text style={styles.batchInfoText}>✅ Trạng thái: {getStatusLabel(selectedBatch.status)}</Text>
+                <Text style={styles.batchInfoText}>Mã lô: {selectedBatch.batchCode}</Text>
+                <Text style={styles.batchInfoText}>Loại cà phê: {selectedBatch.typeName || 'N/A'}</Text>
+                <Text style={styles.batchInfoText}>Số lượng đã xử lý: {selectedBatch.totalOutputQuantity} kg</Text>
+                <Text style={styles.batchInfoText}>Trạng thái: {getStatusLabel(selectedBatch.status)}</Text>
               </View>
             )}
           </Card.Content>
@@ -170,9 +170,9 @@ export default function CreateWarehouseRequestScreen() {
             style={styles.submitButton}
             buttonColor="#FD7622"
           >
-            {loading ? 'Đang gửi yêu cầu...' : '📦 Gửi yêu cầu nhập kho'}
+            {loading ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu nhập kho'}
           </Button>
-          
+
           <Button
             mode="outlined"
             onPress={() => router.back()}

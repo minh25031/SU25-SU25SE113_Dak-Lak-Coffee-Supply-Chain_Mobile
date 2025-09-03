@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Divider, Chip, FAB } from 'react-native-paper';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -58,14 +58,6 @@ export default function CropSeasonDetailScreen() {
             loadCropSeason();
         }, [loadCropSeason])
     );
-
-    const handleEdit = () => {
-        router.push(`/cropseason/${cropSeasonId}/edit`);
-    };
-
-    const handleViewProgress = () => {
-        router.push(`/cropseason/${cropSeasonId}/progress`);
-    };
 
     const getStatusColor = (status: CropSeasonStatusValue) => {
         switch (status) {
@@ -251,52 +243,25 @@ export default function CropSeasonDetailScreen() {
                                             >
                                                 Sửa
                                             </Button>
+
+                                            {/* Progress Button for Detail */}
+                                            <Button
+                                                mode="contained"
+                                                onPress={() => router.push(`/cropseason/${cropSeasonId}/progress?detailId=${detail.detailId}`)}
+                                                style={[styles.progressDetailButton, { backgroundColor: '#3B82F6' }]}
+                                                icon={() => <MaterialCommunityIcons name="chart-line" size={16} color="#FFFFFF" />}
+                                            >
+                                                Tiến độ
+                                            </Button>
                                         </View>
                                     </View>
                                 ))}
                             </Card.Content>
                         </Card>
                     )}
-
-                    {/* Actions Card */}
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <Text style={styles.cardTitle}>Hành động</Text>
-                            <Divider style={styles.divider} />
-
-                            <View style={styles.actionButtons}>
-                                <Button
-                                    mode="contained"
-                                    onPress={handleViewProgress}
-                                    style={[styles.actionButton, { backgroundColor: '#3B82F6' }]}
-                                    icon={() => <MaterialCommunityIcons name="chart-line" size={20} color="#FFFFFF" />}
-                                >
-                                    Xem tiến độ
-                                </Button>
-
-                                {canEdit && (
-                                    <Button
-                                        mode="outlined"
-                                        onPress={handleEdit}
-                                        style={[styles.actionButton, { borderColor: '#F59E0B' }]}
-                                        labelStyle={{ color: '#F59E0B' }}
-                                        icon={() => <MaterialCommunityIcons name="pencil" size={20} color="#F59E0B" />}
-                                    >
-                                        Sửa mùa vụ
-                                    </Button>
-                                )}
-                            </View>
-                        </Card.Content>
-                    </Card>
                 </ScrollView>
 
-                {/* FAB for Quick Actions */}
-                <FAB
-                    icon="plus"
-                    style={styles.fab}
-                    onPress={() => router.push(`/cropseason/${cropSeasonId}/progress/create`)}
-                    label="Thêm tiến độ"
-                />
+
             </View>
         </Background>
     );
@@ -442,7 +407,9 @@ const styles = StyleSheet.create({
     },
     detailActions: {
         marginTop: 12,
-        alignItems: 'flex-end',
+        flexDirection: 'row',
+        gap: 8,
+        justifyContent: 'flex-end',
     },
     editDetailButton: {
         marginTop: 8,
@@ -450,11 +417,11 @@ const styles = StyleSheet.create({
         borderColor: '#C7D2FE',
         borderWidth: 1,
     },
-    actionButtons: {
-        gap: 12,
-    },
-    actionButton: {
-        marginBottom: 8,
+    progressDetailButton: {
+        marginTop: 8,
+        backgroundColor: '#3B82F6',
+        borderColor: '#2563EB',
+        borderWidth: 1,
     },
     fab: {
         position: 'absolute',

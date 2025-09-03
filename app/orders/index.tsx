@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -7,124 +7,70 @@ import {
     TouchableOpacity,
     RefreshControl,
     FlatList,
+    ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-
-interface Order {
-    id: string;
-    orderNumber: string;
-    customerName: string;
-    phone: string;
-    address: string;
-    status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivering' | 'completed' | 'cancelled';
-    totalAmount: number;
-    orderDate: string;
-    estimatedDelivery: string;
-    items: OrderItem[];
-}
-
-interface OrderItem {
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-    total: number;
-}
+import { useRouter, useFocusEffect } from 'expo-router';
+import { getAllOrders, Order, OrderItem } from '@/core/api/orders.api';
 
 export default function OrdersScreen() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
     const [refreshing, setRefreshing] = useState(false);
+    const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    // Mock data
-    useEffect(() => {
-        const mockOrders: Order[] = [
-            {
-                id: '1',
-                orderNumber: 'DH001',
-                customerName: 'Nguyễn Văn A',
-                phone: '0123456789',
-                address: '123 Đường ABC, Quận 1, TP.HCM',
-                status: 'ready',
-                totalAmount: 450000,
-                orderDate: '2025-01-15 10:30',
-                estimatedDelivery: '2025-01-15 14:00',
-                items: [
-                    { id: '1', name: 'Cà phê Robusta 500g', quantity: 2, price: 150000, total: 300000 },
-                    { id: '2', name: 'Cà phê Arabica 500g', quantity: 1, price: 150000, total: 150000 },
-                ],
-            },
-            {
-                id: '2',
-                orderNumber: 'DH002',
-                customerName: 'Trần Thị B',
-                phone: '0987654321',
-                address: '456 Đường XYZ, Quận 2, TP.HCM',
-                status: 'delivering',
-                totalAmount: 250000,
-                orderDate: '2025-01-15 11:00',
-                estimatedDelivery: '2025-01-15 16:00',
-                items: [
-                    { id: '3', name: 'Cà phê Chồn 250g', quantity: 1, price: 250000, total: 250000 },
-                ],
-            },
-            {
-                id: '3',
-                orderNumber: 'DH003',
-                customerName: 'Lê Văn C',
-                phone: '0555666777',
-                address: '789 Đường DEF, Quận 3, TP.HCM',
-                status: 'completed',
-                totalAmount: 650000,
-                orderDate: '2025-01-15 09:00',
-                estimatedDelivery: '2025-01-15 10:00',
-                items: [
-                    { id: '4', name: 'Cà phê Moka 1kg', quantity: 1, price: 400000, total: 400000 },
-                    { id: '5', name: 'Cà phê Culi 500g', quantity: 1, price: 250000, total: 250000 },
-                ],
-            },
-            {
-                id: '4',
-                orderNumber: 'DH004',
-                customerName: 'Phạm Thị D',
-                phone: '0333444555',
-                address: '321 Đường GHI, Quận 4, TP.HCM',
-                status: 'pending',
-                totalAmount: 300000,
-                orderDate: '2025-01-15 12:00',
-                estimatedDelivery: '2025-01-15 15:00',
-                items: [
-                    { id: '6', name: 'Cà phê Robusta 1kg', quantity: 2, price: 150000, total: 300000 },
-                ],
-            },
-        ];
-        setOrders(mockOrders);
+    // Load orders từ API
+    const loadOrders = useCallback(async () => {
+        try {
+            setLoading(true);
+
+            const ordersData = await getAllOrders();
+
+            setOrders(ordersData);
+        } catch (error) {
+            console.error('❌ Error loading orders:', error);
+            // Giữ lại dữ liệu cũ nếu có lỗi
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
-    const onRefresh = async () => {
+    // Refresh data
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        // Simulate API call
-        setTimeout(() => {
-            setRefreshing(false);
-        }, 1000);
-    };
+        await loadOrders();
+        setRefreshing(false);
+    }, [loadOrders]);
+
+    // Load data khi focus vào screen
+    useFocusEffect(
+        useCallback(() => {
+            loadOrders();
+        }, [loadOrders])
+    );
 
     const getStatusColor = (status: string) => {
-        switch (status) {
+        switch (status?.toLowerCase()) {
             case 'pending':
+            case 'chờ xác nhận':
                 return '#F59E0B';
             case 'confirmed':
+            case 'đã xác nhận':
                 return '#3B82F6';
             case 'preparing':
+            case 'đang chuẩn bị':
                 return '#8B5CF6';
             case 'ready':
+            case 'sẵn sàng giao':
                 return '#10B981';
             case 'delivering':
+            case 'đang giao':
                 return '#F59E0B';
             case 'completed':
+            case 'hoàn thành':
                 return '#10B981';
             case 'cancelled':
+            case 'đã hủy':
                 return '#EF4444';
             default:
                 return '#6B7280';
@@ -132,23 +78,30 @@ export default function OrdersScreen() {
     };
 
     const getStatusLabel = (status: string) => {
-        switch (status) {
+        switch (status?.toLowerCase()) {
             case 'pending':
+            case 'chờ xác nhận':
                 return 'Chờ xác nhận';
             case 'confirmed':
+            case 'đã xác nhận':
                 return 'Đã xác nhận';
             case 'preparing':
+            case 'đang chuẩn bị':
                 return 'Đang chuẩn bị';
             case 'ready':
+            case 'sẵn sàng giao':
                 return 'Sẵn sàng giao';
             case 'delivering':
+            case 'đang giao':
                 return 'Đang giao';
             case 'completed':
+            case 'hoàn thành':
                 return 'Hoàn thành';
             case 'cancelled':
+            case 'đã hủy':
                 return 'Đã hủy';
             default:
-                return status;
+                return status || 'Không xác định';
         }
     };
 
@@ -156,22 +109,38 @@ export default function OrdersScreen() {
         return new Intl.NumberFormat('vi-VN', {
             style: 'currency',
             currency: 'VND',
-        }).format(amount);
+        }).format(amount || 0);
+    };
+
+    const formatDate = (dateString?: string) => {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch {
+            return 'N/A';
+        }
     };
 
     const filteredOrders = orders.filter(order =>
-        selectedStatus === 'all' || order.status === selectedStatus
+        selectedStatus === 'all' || order.status?.toLowerCase() === selectedStatus
     );
 
     const renderOrderItem = ({ item }: { item: Order }) => (
         <TouchableOpacity
             style={styles.orderCard}
-            onPress={() => router.push(`/orders/${item.id}`)}
+            onPress={() => router.push(`/orders/${item.orderId}` as any)}
         >
             <View style={styles.orderHeader}>
                 <View style={styles.orderInfo}>
-                    <Text style={styles.orderNumber}>{item.orderNumber}</Text>
-                    <Text style={styles.orderDate}>📅 {item.orderDate}</Text>
+                    <Text style={styles.orderNumber}>{item.orderCode}</Text>
+                    <Text style={styles.orderDate}>{formatDate(item.orderDate)}</Text>
                 </View>
                 <View style={styles.statusContainer}>
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
@@ -180,38 +149,45 @@ export default function OrdersScreen() {
                 </View>
             </View>
 
-            <View style={styles.customerInfo}>
-                <Text style={styles.customerName}>👤 {item.customerName}</Text>
-                <Text style={styles.customerPhone}>📱 {item.phone}</Text>
-                <Text style={styles.address}>📍 {item.address}</Text>
-            </View>
-
             <View style={styles.orderDetails}>
                 <Text style={styles.itemsTitle}>Sản phẩm:</Text>
-                {item.items.map((orderItem) => (
-                    <View key={orderItem.id} style={styles.itemRow}>
-                        <Text style={styles.itemName}>• {orderItem.name}</Text>
-                        <Text style={styles.itemQuantity}>x{orderItem.quantity}</Text>
-                        <Text style={styles.itemTotal}>{formatCurrency(orderItem.total)}</Text>
-                    </View>
-                ))}
+                {item.orderItems && item.orderItems.length > 0 ? (
+                    item.orderItems.map((orderItem) => (
+                        <View key={orderItem.orderItemId} style={styles.itemRow}>
+                            <Text style={styles.itemName}>• {orderItem.productName}</Text>
+                            <Text style={styles.itemQuantity}>x{orderItem.quantity}</Text>
+                            <Text style={styles.itemTotal}>{formatCurrency(orderItem.totalPrice)}</Text>
+                        </View>
+                    ))
+                ) : (
+                    <Text style={styles.noItems}>Không có sản phẩm</Text>
+                )}
             </View>
 
             <View style={styles.orderFooter}>
                 <View style={styles.totalContainer}>
                     <Text style={styles.totalLabel}>Tổng cộng:</Text>
-                    <Text style={styles.totalAmount}>{formatCurrency(item.totalAmount)}</Text>
+                    <Text style={styles.totalAmount}>{formatCurrency(item.totalAmount || 0)}</Text>
                 </View>
-                <Text style={styles.deliveryTime}>⏰ {item.estimatedDelivery}</Text>
+                <Text style={styles.deliveryTime}>{formatDate(item.actualDeliveryDate)}</Text>
             </View>
         </TouchableOpacity>
     );
+
+    if (loading && !refreshing) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#8B5CF6" />
+                <Text style={styles.loadingText}>Đang tải đơn hàng...</Text>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>📋 Quản lý đơn hàng</Text>
+                <Text style={styles.headerTitle}>Quản lý đơn hàng</Text>
                 <Text style={styles.headerSubtitle}>Theo dõi trạng thái đơn hàng</Text>
             </View>
 
@@ -220,10 +196,10 @@ export default function OrdersScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {[
                         { key: 'all', label: 'Tất cả', count: orders.length },
-                        { key: 'pending', label: 'Chờ xác nhận', count: orders.filter(o => o.status === 'pending').length },
-                        { key: 'ready', label: 'Sẵn sàng giao', count: orders.filter(o => o.status === 'ready').length },
-                        { key: 'delivering', label: 'Đang giao', count: orders.filter(o => o.status === 'delivering').length },
-                        { key: 'completed', label: 'Hoàn thành', count: orders.filter(o => o.status === 'completed').length },
+                        { key: 'pending', label: 'Chờ xác nhận', count: orders.filter(o => o.status?.toLowerCase() === 'pending').length },
+                        { key: 'ready', label: 'Sẵn sàng giao', count: orders.filter(o => o.status?.toLowerCase() === 'ready').length },
+                        { key: 'delivering', label: 'Đang giao', count: orders.filter(o => o.status?.toLowerCase() === 'delivering').length },
+                        { key: 'completed', label: 'Hoàn thành', count: orders.filter(o => o.status?.toLowerCase() === 'completed').length },
                     ].map((filter) => (
                         <TouchableOpacity
                             key={filter.key}
@@ -259,18 +235,24 @@ export default function OrdersScreen() {
             <FlatList
                 data={filteredOrders}
                 renderItem={renderOrderItem}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => item.orderId}
                 contentContainerStyle={styles.ordersList}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
                 showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>Không có đơn hàng nào</Text>
+                        <Text style={styles.emptySubtext}>Hãy tạo đơn hàng mới hoặc kiểm tra lại bộ lọc</Text>
+                    </View>
+                }
             />
 
             {/* Floating Action Button */}
             <TouchableOpacity
                 style={styles.fab}
-                onPress={() => router.push('/orders/new')}
+                onPress={() => router.push('/orders/new' as any)}
             >
                 <Text style={styles.fabText}>+</Text>
             </TouchableOpacity>
@@ -492,5 +474,40 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: '#FFFFFF',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FEFAF4',
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#6B7280',
+    },
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 50,
+    },
+    emptyText: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#374151',
+        marginBottom: 10,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: '#6B7280',
+        textAlign: 'center',
+        paddingHorizontal: 20,
+    },
+    noItems: {
+        fontSize: 14,
+        color: '#6B7280',
+        textAlign: 'center',
+        paddingVertical: 10,
     },
 });

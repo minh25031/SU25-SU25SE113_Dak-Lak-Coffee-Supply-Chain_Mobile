@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     View,
     Text,
@@ -12,6 +12,9 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CarouselBanner from '@/components/CarouselBanner';
 import { dashboardAPI, MenuItem, DashboardStats, ActivityItem } from '@/core/api/dashboard.api';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import SkeletonDashboard from '@/components/SkeletonDashboard';
+
 
 interface UserInfo {
     name: string;
@@ -22,44 +25,51 @@ interface UserInfo {
 export default function HomeScreen() {
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+    const [stats, setStats] = useState<DashboardStats[]>([]);
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [loading, setLoading] = useState(true);
     const router = useRouter();
+    const scrollViewRef = useRef<ScrollView>(null);
 
     useEffect(() => {
         loadUserInfo();
     }, []);
 
+
+
     const loadUserInfo = async () => {
         try {
             const userInfoStr = await AsyncStorage.getItem('userInfo');
-            console.log('📱 Raw userInfo from AsyncStorage:', userInfoStr);
 
             if (userInfoStr) {
                 const user = JSON.parse(userInfoStr);
-                console.log('👤 Parsed user info:', user);
                 setUserInfo(user);
 
                 // Load dashboard data theo role
                 await loadDashboardData(user.role);
-            } else {
-                console.log('⚠️ No userInfo found in AsyncStorage');
             }
         } catch (error) {
             console.error('❌ Error loading user info:', error);
         }
     };
 
-    const [stats, setStats] = useState<DashboardStats[]>([]);
-
     const loadDashboardData = async (role: string) => {
         try {
-            const dashboardData = await dashboardAPI.getDashboardData(role);
+            setLoading(true);
+            const startTime = Date.now();
+
+            const dashboardData = await dashboardAPI.getDashboardDataOptimized(role);
+
+            const loadTime = Date.now() - startTime;
+
             setMenuItems(dashboardData.menuItems);
             setStats(dashboardData.stats);
             setActivities(dashboardData.activities);
         } catch (error) {
             console.error('❌ Error loading dashboard data:', error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -108,14 +118,25 @@ export default function HomeScreen() {
         item.roles.includes(userInfo?.role || '')
     );
 
-
-
     // Hoạt động theo role - sử dụng API thay vì hardcode
     const activitiesData = activities;
 
+    // Hiển thị skeleton loading khi đang tải
+    if (loading) {
+        return <SkeletonDashboard />;
+    }
+
     return (
         <ScrollView
+            ref={scrollViewRef}
             style={styles.container}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces={true}
+            alwaysBounceVertical={true}
+            scrollEnabled={true}
+            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
             refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
@@ -148,10 +169,14 @@ export default function HomeScreen() {
                 </View>
             </View>
 
+
+
             {/* Banner Carousel */}
             <View style={styles.bannerContainer}>
                 <CarouselBanner />
             </View>
+
+
 
             {/* Quick Stats */}
             <View style={styles.statsContainer}>
@@ -159,7 +184,12 @@ export default function HomeScreen() {
                 <View style={styles.statsGrid}>
                     {stats.map((stat, index) => (
                         <View key={index} style={[styles.statCard, { flex: 1, marginHorizontal: 4 }]}>
-                            <Text style={styles.statIcon}>{stat.icon}</Text>
+                            <MaterialCommunityIcons
+                                name={stat.icon as any}
+                                size={32}
+                                color="#FD7622"
+                                style={styles.statIcon}
+                            />
                             <Text style={styles.statNumber}>{stat.number}</Text>
                             <Text style={styles.statLabel}>{stat.label}</Text>
                         </View>
@@ -175,9 +205,14 @@ export default function HomeScreen() {
                         <TouchableOpacity
                             key={item.id}
                             style={[styles.menuItem, { borderLeftColor: item.color }]}
-                            onPress={() => router.push(item.route)}
+                            onPress={() => router.push(item.route as any)}
                         >
-                            <Text style={styles.menuIcon}>{item.icon}</Text>
+                            <MaterialCommunityIcons
+                                name={item.icon as any}
+                                size={32}
+                                color={item.color || '#FD7622'}
+                                style={styles.menuIcon}
+                            />
                             <View style={styles.menuContent}>
                                 <Text style={styles.menuTitle}>{item.title}</Text>
                                 <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
@@ -185,17 +220,41 @@ export default function HomeScreen() {
                             <Text style={styles.menuArrow}>→</Text>
                         </TouchableOpacity>
                     ))}
+
+                    {/* Nút Tư vấn cho Farmer */}
+                    {userInfo?.role === 'Farmer' && (
+                        <TouchableOpacity
+                            style={[styles.menuItem, { borderLeftColor: '#10B981' }]}
+                            onPress={() => router.push('/farmer-reports')}
+                        >
+                            <MaterialCommunityIcons
+                                name="message-text"
+                                size={32}
+                                color="#10B981"
+                                style={styles.menuIcon}
+                            />
+                            <View style={styles.menuContent}>
+                                <Text style={styles.menuTitle}>Tư vấn kỹ thuật</Text>
+                                <Text style={styles.menuSubtitle}>Gửi báo cáo và nhận tư vấn</Text>
+                            </View>
+                            <Text style={styles.menuArrow}>→</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
 
-            {/* Recent Activity */}
+            {/* Recent Activities */}
             <View style={styles.activityContainer}>
                 <Text style={styles.sectionTitle}>Hoạt động gần đây</Text>
                 <View style={styles.activityList}>
                     {activitiesData.map((activity, index) => (
                         <View key={index} style={styles.activityItem}>
                             <View style={styles.activityIcon}>
-                                <Text style={styles.activityEmoji}>{activity.icon}</Text>
+                                <MaterialCommunityIcons
+                                    name={activity.icon as any}
+                                    size={20}
+                                    color="#6B7280"
+                                />
                             </View>
                             <View style={styles.activityContent}>
                                 <Text style={styles.activityTitle}>{activity.title}</Text>
@@ -208,8 +267,8 @@ export default function HomeScreen() {
 
             {/* Footer */}
             <View style={styles.footer}>
-                <Text style={styles.footerText}>DakLak Coffee - Chuỗi cung ứng chất lượng</Text>
-                <Text style={styles.footerSubtext}>© 2025 All rights reserved</Text>
+                <Text style={styles.footerText}>Dak Lak Coffee Supply Chain</Text>
+                <Text style={styles.footerSubtext}>Quản lý chuỗi cung ứng cà phê</Text>
             </View>
         </ScrollView>
     );
@@ -219,6 +278,11 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#FEFAF4',
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingBottom: 30,
+        minHeight: '100%',
     },
     header: {
         backgroundColor: '#FD7622',
@@ -238,8 +302,7 @@ const styles = StyleSheet.create({
     },
     greeting: {
         fontSize: 16,
-        color: '#FFFFFF',
-        opacity: 0.9,
+        color: 'rgba(255, 255, 255, 0.8)',
         marginBottom: 4,
     },
     userName: {
@@ -264,36 +327,37 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 6,
     },
     avatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
     },
     defaultAvatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: '#FD7622',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     defaultAvatarText: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#FFFFFF',
     },
+
     bannerContainer: {
         marginTop: -20,
         marginHorizontal: 24,
+        marginBottom: 30,
+    },
+
+    statsContainer: {
+        paddingHorizontal: 24,
         marginBottom: 30,
     },
     sectionTitle: {
@@ -302,19 +366,15 @@ const styles = StyleSheet.create({
         color: '#1F2937',
         marginBottom: 20,
     },
-    statsContainer: {
-        paddingHorizontal: 24,
-        marginBottom: 30,
-    },
     statsGrid: {
         flexDirection: 'row',
         gap: 12,
     },
     statCard: {
         backgroundColor: '#FFFFFF',
-        alignItems: 'center',
         padding: 20,
         borderRadius: 16,
+        alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -322,8 +382,8 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     statIcon: {
-        fontSize: 32,
         marginBottom: 8,
+        alignSelf: 'center',
     },
     statNumber: {
         fontSize: 24,
@@ -404,9 +464,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
-    },
-    activityEmoji: {
-        fontSize: 20,
     },
     activityContent: {
         flex: 1,

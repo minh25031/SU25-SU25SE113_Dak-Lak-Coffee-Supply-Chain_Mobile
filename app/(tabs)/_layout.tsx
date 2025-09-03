@@ -1,42 +1,104 @@
+import React, { useEffect, useState, useRef } from 'react';
 import { Tabs } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, AppState, AppStateStatus } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function TabLayout() {
+    const [userRole, setUserRole] = useState<string>('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [key, setKey] = useState(0); // Force re-render
+    const appState = useRef(AppState.currentState);
+    const lastRoleRef = useRef<string>('');
+
+    // Reload khi tab được focus
+    useFocusEffect(
+        React.useCallback(() => {
+            loadUserRole();
+        }, [])
+    );
+
+    // Reload khi component mount
+    useEffect(() => {
+        loadUserRole();
+
+        // Listener cho app state changes (chỉ khi app trở nên active)
+        const handleAppStateChange = (nextAppState: AppStateStatus) => {
+            if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+                loadUserRole();
+            }
+            appState.current = nextAppState;
+        };
+
+        const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+        return () => {
+            subscription?.remove();
+        };
+    }, []);
+
+    const loadUserRole = async () => {
+        try {
+            const userInfoStr = await AsyncStorage.getItem('userInfo');
+
+            if (userInfoStr) {
+                const userInfo = JSON.parse(userInfoStr);
+
+                const newRole = userInfo.role || 'Farmer';
+                // Force update role nếu khác với current state
+                if (newRole !== userRole) {
+                    lastRoleRef.current = newRole;
+                    setUserRole(newRole);
+                    setKey(prev => prev + 1); // Force re-render
+                }
+            } else {
+                const newRole = 'Farmer';
+                if (newRole !== userRole) {
+                    lastRoleRef.current = newRole;
+                    setUserRole(newRole);
+                    setKey(prev => prev + 1);
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error loading user role:', error);
+            const newRole = 'Farmer';
+            if (newRole !== userRole) {
+                lastRoleRef.current = newRole;
+                setUserRole(newRole);
+                setKey(prev => prev + 1);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+
+    // Nếu đang loading, hiển thị loading state
+    if (isLoading) {
+        return null;
+    }
+
+    // Render tabs với conditional farmer-reports
     return (
         <Tabs
+            key={`tabs-${key}`}
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: styles.tabBar,
                 tabBarActiveTintColor: '#FD7622',
                 tabBarInactiveTintColor: '#9CA3AF',
                 tabBarLabelStyle: styles.tabLabel,
-                tabBarIconStyle: styles.tabIcon,
+                tabBarIconStyle: {},
             }}
         >
             <Tabs.Screen
                 name="index"
                 options={{
-                    title: 'Trang chủ',
+                    title: userRole === 'DeliveryStaff' ? 'Trang chủ' : 'Trang chủ',
                     tabBarIcon: ({ color, size }) => (
-                        <Text style={[styles.tabIconText, { color, fontSize: size }]}>🏠</Text>
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="cropseason"
-                options={{
-                    title: 'Mùa vụ',
-                    tabBarIcon: ({ color, size }) => (
-                        <Text style={[styles.tabIconText, { color, fontSize: size }]}>🌱</Text>
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="warehouse"
-                options={{
-                    title: 'Kho hàng',
-                    tabBarIcon: ({ color, size }) => (
-                        <Text style={[styles.tabIconText, { color, fontSize: size }]}>🏭</Text>
+                        <MaterialCommunityIcons name="home" size={size} color={color} />
                     ),
                 }}
             />
@@ -45,7 +107,7 @@ export default function TabLayout() {
                 options={{
                     title: 'Cá nhân',
                     tabBarIcon: ({ color, size }) => (
-                        <Text style={[styles.tabIconText, { color, fontSize: size }]}>👤</Text>
+                        <MaterialCommunityIcons name="account" size={size} color={color} />
                     ),
                 }}
             />
@@ -72,10 +134,5 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         marginTop: 4,
     },
-    tabIcon: {
-        marginTop: 4,
-    },
-    tabIconText: {
-        textAlign: 'center',
-    },
+
 });

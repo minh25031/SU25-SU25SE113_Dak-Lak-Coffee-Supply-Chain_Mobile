@@ -36,13 +36,21 @@ export default function DeliveryDashboard() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('🚚 Loading delivery data...');
+      const startTime = Date.now();
 
-      // Load shipments and statistics in parallel
+      // Parallel loading với timeout protection và error handling
       const [shipmentsData, statisticsData] = await Promise.all([
-        getMyShipments(),
-        getDeliveryStatistics(),
+        getMyShipments().catch(error => {
+          console.error('❌ Error loading shipments:', error);
+          return [];
+        }),
+        getDeliveryStatistics().catch(error => {
+          console.error('❌ Error loading statistics:', error);
+          return null;
+        }),
       ]);
+
+      const loadTime = Date.now() - startTime;
 
       setShipments(shipmentsData);
       setStatistics(statisticsData);

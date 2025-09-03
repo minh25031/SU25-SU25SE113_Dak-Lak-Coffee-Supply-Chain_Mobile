@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { login } from '@/core/api/auth.api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -33,9 +34,7 @@ export default function LoginScreen() {
 
         setLoading(true);
         try {
-            console.log('🔐 Attempting login to:', 'https://daklak.coffee.techtheworld.id.vn/api/Auth/login');
             const response = await login(email, password);
-            console.log('📡 Login response:', response);
 
             // Kiểm tra nếu response là JWT token string
             if (typeof response === 'string' && response.length > 0) {
@@ -51,7 +50,6 @@ export default function LoginScreen() {
                     }).join(''));
 
                     const decoded = JSON.parse(jsonPayload);
-                    console.log('🔓 Decoded token:', decoded);
 
                     const userInfo = {
                         name: decoded.name || decoded.fullName || 'Người dùng',
@@ -59,8 +57,6 @@ export default function LoginScreen() {
                         role: decoded.role || 'Farmer',
                         avatar: decoded.profilePictureUrl || decoded.avatar || ''
                     };
-
-                    console.log('👤 User info to save:', userInfo);
                     await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
 
                     router.replace('/(tabs)');
@@ -79,7 +75,6 @@ export default function LoginScreen() {
                     avatar: response.profilePictureUrl || response.avatar || ''
                 };
 
-                console.log('👤 User info to save:', userInfo);
                 await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
 
                 router.replace('/(tabs)');
@@ -94,12 +89,10 @@ export default function LoginScreen() {
                     avatar: response.data.profilePictureUrl || response.data.avatar || ''
                 };
 
-                console.log('👤 User info to save (nested):', userInfo);
                 await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
 
                 router.replace('/(tabs)');
             } else {
-                console.log('⚠️ Unexpected response structure:', response);
                 Alert.alert('Đăng nhập thất bại', 'Cấu trúc dữ liệu không hợp lệ');
             }
         } catch (error: any) {
@@ -203,19 +196,7 @@ export default function LoginScreen() {
                         <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={styles.testConnectionButton}
-                        onPress={async () => {
-                            try {
-                                const response = await fetch('https://daklak.coffee.techtheworld.id.vn/api/health');
-                                Alert.alert('Kết nối server', `Server đang hoạt động: ${response.status}`);
-                            } catch (error) {
-                                Alert.alert('Kết nối server', 'Không thể kết nối đến server. Vui lòng kiểm tra internet hoặc liên hệ admin.');
-                            }
-                        }}
-                    >
-                        <Text style={styles.testConnectionText}>🔍 Test kết nối server</Text>
-                    </TouchableOpacity>
+
                 </View>
 
                 {/* Footer */}
@@ -359,18 +340,7 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '500',
     },
-    testConnectionButton: {
-        alignItems: 'center',
-        marginTop: 16,
-        padding: 12,
-        backgroundColor: '#F3F4F6',
-        borderRadius: 8,
-    },
-    testConnectionText: {
-        color: '#6B7280',
-        fontSize: 14,
-        fontWeight: '500',
-    },
+
     footer: {
         flexDirection: 'row',
         justifyContent: 'center',
