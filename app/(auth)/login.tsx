@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { login } from '@/core/api/auth.api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '@/core/api/axiosClient';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -33,7 +34,7 @@ export default function LoginScreen() {
 
         setLoading(true);
         try {
-            console.log('🔐 Attempting login to:', 'https://daklak.coffee.techtheworld.id.vn/api/Auth/login');
+            console.log('🔐 Attempting login with email:', email);
             const response = await login(email, password);
             console.log('📡 Login response:', response);
 
@@ -207,7 +208,8 @@ export default function LoginScreen() {
                         style={styles.testConnectionButton}
                         onPress={async () => {
                             try {
-                                const response = await fetch('https://daklak.coffee.techtheworld.id.vn/api/health');
+                                // Test connection using the configured API client
+                                const response = await api.get('/health');
                                 Alert.alert('Kết nối server', `Server đang hoạt động: ${response.status}`);
                             } catch (error) {
                                 Alert.alert('Kết nối server', 'Không thể kết nối đến server. Vui lòng kiểm tra internet hoặc liên hệ admin.');

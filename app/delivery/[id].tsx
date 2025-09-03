@@ -398,27 +398,132 @@ export default function ShipmentDetailScreen() {
             </Card.Content>
           </Card>
 
-          {/* Shipment Details */}
+          {/* Buyer Information Card */}
           <Card style={styles.card}>
             <Card.Content>
-              <Text style={styles.cardTitle}>Chi tiết sản phẩm</Text>
+              <Text style={styles.cardTitle}>Thông tin bên nhận hàng</Text>
               <Divider style={styles.divider} />
 
-              {currentShipment.shipmentDetails?.map((detail, index) => (
-                <View key={detail.shipmentDetailId} style={styles.detailRow}>
-                  <View style={styles.detailInfo}>
-                    <Text style={styles.detailName}>{detail.productName}</Text>
-                    <Text style={styles.detailQuantity}>
-                      {detail.quantity} {detail.unit}
-                    </Text>
+              {(currentShipment.buyerCompanyName || currentShipment.buyerContactPerson || currentShipment.buyerCompanyAddress) ? (
+                <>
+                  <View style={styles.infoRow}>
+                    <MaterialCommunityIcons name="office-building" size={20} color="#10B981" />
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Công ty nhận hàng</Text>
+                      <Text style={styles.infoValue}>
+                        {currentShipment.buyerCompanyName || 'Không có tên'}
+                      </Text>
+                    </View>
                   </View>
-                  {detail.note && (
-                    <Text style={styles.detailNote}>{detail.note}</Text>
+
+                  {currentShipment.buyerContactPerson && (
+                    <View style={styles.infoRow}>
+                      <MaterialCommunityIcons name="account-tie" size={20} color="#10B981" />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Người liên hệ</Text>
+                        <Text style={styles.infoValue}>{currentShipment.buyerContactPerson}</Text>
+                      </View>
+                    </View>
                   )}
-                </View>
-              )) || (
-                  <Text style={styles.detailNote}>Không có chi tiết sản phẩm</Text>
-                )}
+
+                  {currentShipment.buyerCompanyAddress && (
+                    <View style={styles.infoRow}>
+                      <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Địa chỉ giao hàng</Text>
+                        <Text style={styles.infoValue}>{currentShipment.buyerCompanyAddress}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {currentShipment.buyerPhone && (
+                    <View style={styles.infoRow}>
+                      <MaterialCommunityIcons name="phone" size={20} color="#10B981" />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Số điện thoại</Text>
+                        <Text style={styles.infoValue}>{currentShipment.buyerPhone}</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {currentShipment.buyerEmail && (
+                    <View style={styles.infoRow}>
+                      <MaterialCommunityIcons name="email" size={20} color="#10B981" />
+                      <View style={styles.infoContent}>
+                        <Text style={styles.infoLabel}>Email</Text>
+                        <Text style={styles.infoValue}>{currentShipment.buyerEmail}</Text>
+                      </View>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <Text style={styles.detailNote}>
+                  Chưa có thông tin về bên nhận hàng
+                </Text>
+              )}
+            </Card.Content>
+          </Card>
+
+          {/* Shipment Details with Warehouse Info */}
+          <Card style={styles.card}>
+            <Card.Content>
+              <Text style={styles.cardTitle}>Chi tiết sản phẩm & Kho xuất hàng</Text>
+              <Divider style={styles.divider} />
+
+              {currentShipment.shipmentDetails?.map((detail, index) => {
+                // Lấy thông tin kho tương ứng (có thể có nhiều kho)
+                const warehouse = currentShipment.warehouses?.[index] || currentShipment.warehouses?.[0];
+                
+                return (
+                  <View key={detail.shipmentDetailId} style={styles.detailSection}>
+                    {/* Warehouse Information */}
+                    {warehouse && (
+                      <View style={styles.warehouseInfo}>
+                        <View style={styles.warehouseHeader}>
+                          <MaterialCommunityIcons name="warehouse" size={18} color="#3B82F6" />
+                          <Text style={styles.warehouseTitle}>Kho xuất hàng</Text>
+                        </View>
+                        <Text style={styles.warehouseName}>{warehouse.name}</Text>
+                        {warehouse.location && (
+                          <Text style={styles.warehouseLocation}>
+                            <MaterialCommunityIcons name="map-marker" size={14} color="#6B7280" />
+                            {warehouse.location}
+                          </Text>
+                        )}
+                      </View>
+                    )}
+
+                    {/* Product Information */}
+                    <View style={styles.productInfo}>
+                      <View style={styles.detailRow}>
+                        <View style={styles.detailInfo}>
+                          <Text style={styles.detailName}>{detail.productName}</Text>
+                          <Text style={styles.detailQuantity}>
+                            {detail.quantity} {detail.unit}
+                          </Text>
+                        </View>
+                        {detail.note && (
+                          <Text style={styles.detailNote}>{detail.note}</Text>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Divider between items */}
+                    {index < (currentShipment.shipmentDetails?.length || 0) - 1 && (
+                      <Divider style={styles.itemDivider} />
+                    )}
+                  </View>
+                );
+              }) || (
+                <Text style={styles.detailNote}>Không có chi tiết sản phẩm</Text>
+              )}
+
+              {/* Fallback message if no warehouse info */}
+              {(!currentShipment.warehouses || currentShipment.warehouses.length === 0) && (
+                <Text style={styles.detailNote}>
+                  Chưa có thông tin về kho xuất hàng
+                </Text>
+              )}
             </Card.Content>
           </Card>
 
@@ -431,7 +536,7 @@ export default function ShipmentDetailScreen() {
 
                 {/* Error Summary */}
                 {(errors.note || errors.status || errors.general) && (
-                  <View style={styles.errorContainer}>
+                  <View style={styles.formErrorContainer}>
                     <MaterialCommunityIcons name="alert-circle" size={20} color="#EF4444" />
                     <Text style={styles.errorTitle}>Vui lòng sửa các lỗi sau:</Text>
 
@@ -667,14 +772,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#F3F4F6',
   },
-  errorContainer: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
+
   errorTitle: {
     fontSize: 14,
     fontWeight: '600',
@@ -687,5 +785,51 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     marginLeft: 28,
     marginBottom: 4,
+  },
+  detailSection: {
+    marginBottom: 12,
+  },
+  warehouseInfo: {
+    backgroundColor: '#E0E7FF',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  warehouseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  warehouseTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#3B82F6',
+    marginLeft: 8,
+  },
+  warehouseName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  warehouseLocation: {
+    fontSize: 12,
+    color: '#6B7280',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  productInfo: {
+    marginTop: 12,
+  },
+  itemDivider: {
+    marginVertical: 12,
+  },
+  formErrorContainer: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
   },
 });

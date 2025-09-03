@@ -46,6 +46,7 @@ export interface WarehouseInboundRequestListItem {
   preferredDeliveryDate: string;
   status: string | number; // Có thể là string hoặc number
   createdAt: string;
+  updatedAt?: string; // Thêm trường này để fix lỗi formatTimeAgo
   businessStaffName?: string;
 }
 

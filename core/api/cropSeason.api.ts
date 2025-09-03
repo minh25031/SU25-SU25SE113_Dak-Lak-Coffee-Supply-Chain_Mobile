@@ -5,6 +5,7 @@ import api from './axiosClient';
 export interface CropSeason {
   cropSeasonId: string;  // Đây là ID chính từ API
   name?: string;         // Optional vì API không trả về
+  cropSeasonCode?: string; // Thêm trường này để fix lỗi undefined
   seasonName: string;
   description?: string;
   startDate: string;
@@ -17,11 +18,14 @@ export interface CropSeason {
   farmerName?: string;
   registrationCode?: string;
   commitmentId?: string;
+  createdAt?: string;    // Thêm trường này để fix lỗi formatTimeAgo
+  updatedAt?: string;    // Thêm trường này để fix lỗi formatTimeAgo
 }
 
 export interface CropSeasonListItem {
   cropSeasonId: string;  // Đây là ID chính từ API
   name?: string;         // Optional vì API không trả về
+  cropSeasonCode?: string; // Thêm trường này để fix lỗi undefined
   seasonName: string;
   description?: string;
   startDate: string;
@@ -30,6 +34,8 @@ export interface CropSeasonListItem {
   area?: number;
   farmerId: string;
   farmerName: string;
+  createdAt?: string;    // Thêm trường này để fix lỗi formatTimeAgo
+  updatedAt?: string;    // Thêm trường này để fix lỗi formatTimeAgo
 }
 
 export interface CropSeasonDetail {
