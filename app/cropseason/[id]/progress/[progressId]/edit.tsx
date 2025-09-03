@@ -209,7 +209,7 @@ export default function EditCropProgressScreen() {
                     {/* Progress Info Card */}
                     <Card style={styles.infoCard}>
                         <Card.Content>
-                            <Text style={styles.infoTitle}>📋 Thông tin tiến độ hiện tại</Text>
+                            <Text style={styles.infoTitle}>Thông tin tiến độ hiện tại</Text>
                             <Divider style={styles.divider} />
                             <Text style={styles.progressInfo}>
                                 Mùa vụ: {cropSeason.seasonName}
@@ -317,7 +317,7 @@ export default function EditCropProgressScreen() {
                     {/* Original Data Info */}
                     <Card style={styles.infoCard}>
                         <Card.Content>
-                            <Text style={styles.infoTitle}>📋 Dữ liệu gốc</Text>
+                            <Text style={styles.infoTitle}>Dữ liệu gốc</Text>
                             <Divider style={styles.divider} />
                             <Text style={styles.originalText}>
                                 Giai đoạn ban đầu: {stages.find(s => s.stageId === progress.stageId)?.stageName || 'N/A'}

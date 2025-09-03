@@ -37,15 +37,36 @@ export async function login(email: string, password: string): Promise<any> {
 }
 
 // Function đăng ký
-export async function register(fullName: string, email: string, password: string, phone: string): Promise<any> {
+export async function register(
+  fullName: string, 
+  email: string, 
+  password: string, 
+  phone: string, 
+  roleId: number = 1,
+  companyName: string = '',
+  taxId: string = '',
+  businessLicenseURL: string = ''
+): Promise<any> {
   try {
     console.log('🔐 Attempting registration with email:', email);
-    const response = await api.post('/Auth/register', {
-      fullName,
+    
+    // Prepare base registration data
+    const registrationData: any = {
+      name: fullName, // Backend expects 'name' not 'fullName'
       email,
       password,
       phone,
-    });
+      roleId,
+    };
+
+    // Add business-specific fields if role is business (assuming roleId 2 is business)
+    if (roleId === 2 || roleId === 3) { // Assuming roleId 2 or 3 could be business roles
+      registrationData.companyName = companyName;
+      registrationData.taxId = taxId;
+      registrationData.businessLicenseURl = businessLicenseURL; // Note: backend uses 'URl' not 'URL'
+    }
+
+    const response = await api.post('/Auth/SignUpRequest', registrationData);
     
     console.log('✅ Registration response:', response.data);
     return response.data;
@@ -53,6 +74,19 @@ export async function register(fullName: string, email: string, password: string
     console.error('❌ Registration error:', error);
     console.error('❌ Registration error response:', error.response?.data);
     console.error('❌ Registration error status:', error.response?.status);
+    throw error;
+  }
+}
+
+// Function lấy roles
+export async function getBusinessAndFarmerRole(): Promise<any[]> {
+  try {
+    console.log('🎭 Fetching roles...');
+    const response = await api.get('/Roles/BusinessAndFarmer');
+    console.log('✅ Roles response:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Error fetching roles:', error);
     throw error;
   }
 }

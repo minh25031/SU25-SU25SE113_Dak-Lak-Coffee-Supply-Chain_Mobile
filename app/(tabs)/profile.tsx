@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface UserInfo {
     name: string;
@@ -81,35 +82,35 @@ export default function ProfileScreen() {
             id: 'account',
             title: 'Thông tin tài khoản',
             subtitle: 'Cập nhật thông tin cá nhân',
-            icon: '👤',
+            icon: 'account',
             onPress: () => Alert.alert('Thông báo', 'Tính năng đang phát triển'),
         },
         {
             id: 'security',
             title: 'Bảo mật',
             subtitle: 'Đổi mật khẩu, xác thực 2 yếu tố',
-            icon: '🔒',
+            icon: 'lock',
             onPress: () => Alert.alert('Thông báo', 'Tính năng đang phát triển'),
         },
         {
             id: 'notifications',
             title: 'Thông báo',
             subtitle: 'Cài đặt thông báo',
-            icon: '🔔',
+            icon: 'bell',
             onPress: () => Alert.alert('Thông báo', 'Tính năng đang phát triển'),
         },
         {
             id: 'help',
             title: 'Trợ giúp & Hỗ trợ',
             subtitle: 'Hướng dẫn sử dụng, liên hệ hỗ trợ',
-            icon: '❓',
+            icon: 'help-circle',
             onPress: () => Alert.alert('Thông báo', 'Tính năng đang phát triển'),
         },
         {
             id: 'about',
             title: 'Về ứng dụng',
             subtitle: 'Phiên bản, thông tin phát triển',
-            icon: 'ℹ️',
+            icon: 'information',
             onPress: () => Alert.alert('Thông báo', 'Tính năng đang phát triển'),
         },
     ];
@@ -152,7 +153,12 @@ export default function ProfileScreen() {
                         style={styles.menuItem}
                         onPress={item.onPress}
                     >
-                        <Text style={styles.menuIcon}>{item.icon}</Text>
+                        <MaterialCommunityIcons
+                            name={item.icon as any}
+                            size={24}
+                            color="#FD7622"
+                            style={styles.menuIcon}
+                        />
                         <View style={styles.menuContent}>
                             <Text style={styles.menuTitle}>{item.title}</Text>
                             <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
@@ -165,7 +171,12 @@ export default function ProfileScreen() {
             {/* Logout Button */}
             <View style={styles.logoutContainer}>
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                    <Text style={styles.logoutIcon}>🚪</Text>
+                    <MaterialCommunityIcons
+                        name="logout"
+                        size={20}
+                        color="#FFFFFF"
+                        style={styles.logoutIcon}
+                    />
                     <Text style={styles.logoutText}>Đăng xuất</Text>
                 </TouchableOpacity>
             </View>

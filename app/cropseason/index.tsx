@@ -49,7 +49,8 @@ export default function CropSeasonListScreen() {
 
     const fetchData = async () => {
         try {
-            console.log('🔄 Đang tải danh sách mùa vụ...');
+            setLoading(true);
+            const startTime = Date.now();
 
             // Kiểm tra authentication trước khi gọi API
             const token = await AsyncStorage.getItem('authToken');
@@ -61,12 +62,12 @@ export default function CropSeasonListScreen() {
             }
 
             const response = await getCropSeasonsForCurrentUser();
-            console.log('📡 API Response processed:', response);
+
+            const loadTime = Date.now() - startTime;
 
             // Response đã được xử lý trong API function, luôn là array
             setData(response);
             setFilteredData(response);
-            console.log('✅ Dữ liệu mùa vụ đã được set:', response.length, 'items');
         } catch (error: any) {
             console.error('❌ Lỗi khi tải mùa vụ:', error);
 

@@ -32,7 +32,49 @@ export interface CommitmentListItem {
   totalQuantity: number;
   coffeeType: string;
   qualityGrade: string;
-  price: number;
+  approvedAt?: string; // Thêm thuộc tính này để kiểm tra commitment đã được duyệt
+}
+
+// Interface cho response từ AvailableForCropSeason endpoint (giống như web)
+export interface FarmingCommitmentViewAllDto {
+  commitmentId: string;
+  commitmentCode: string;
+  commitmentName: string;
+  farmerId: string;
+  farmerName: string;
+  companyName: string;
+  planTitle: string;
+  totalPrice?: number;
+  progressPercentage?: number;
+  commitmentDate: string;
+  approvedAt?: string;
+  status: string;
+  farmingCommitmentDetails: FarmingCommitmentDetail[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FarmingCommitmentDetail {
+  commitmentDetailId: string;
+  commitmentDetailCode: string;
+  commitmentId: string;
+  registrationDetailId: string;
+  planDetailId: string;
+  coffeeTypeName: string;
+  confirmedPrice: number;
+  advancePayment: number;
+  taxPrice: number;
+  committedQuantity: number;
+  deliveriedQuantity: number;
+  estimatedDeliveryStart: string;
+  estimatedDeliveryEnd: string;
+  expectedHarvestStart?: string;
+  expectedHarvestEnd?: string;
+  note: string;
+  progressPercentage: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export enum CommitmentStatus {
@@ -62,6 +104,19 @@ export async function getFarmerCommitments(): Promise<CommitmentListItem[]> {
     return response.data || [];
   } catch (error) {
     console.error('❌ Error fetching farmer commitments:', error);
+    throw error;
+  }
+}
+
+/**
+ * Lấy danh sách cam kết khả dụng để tạo mùa vụ (giống như web)
+ */
+export async function getAvailableCommitments(): Promise<FarmingCommitmentViewAllDto[]> {
+  try {
+    const response = await api.get('/FarmingCommitment/Farmer/AvailableForCropSeason');
+    return response.data || [];
+  } catch (error) {
+    console.error('❌ Error fetching available commitments:', error);
     throw error;
   }
 }

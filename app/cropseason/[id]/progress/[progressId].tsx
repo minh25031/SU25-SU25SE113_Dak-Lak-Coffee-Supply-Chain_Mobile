@@ -340,7 +340,7 @@ export default function CropProgressDetailScreen() {
                                         </Text>
                                     )}
                                     <Text style={styles.stageOrder}>
-                                        Thứ tự: {currentStage.orderIndex !== undefined ? currentStage.orderIndex + 1 : 'N/A'}
+                                        Thứ tự: {currentStage.orderIndex !== undefined ? currentStage.orderIndex : 'N/A'}
                                     </Text>
                                 </Card.Content>
                             </Card>

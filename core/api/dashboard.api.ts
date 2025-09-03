@@ -2,6 +2,24 @@ import api from './axiosClient';
 import { getCropSeasonsForCurrentUser } from './cropSeason.api';
 import { getWarehouseInboundRequestsForCurrentUser } from './warehouseRequest.api';
 
+// Cache system để tăng tốc độ
+const CACHE_DURATION = 5 * 60 * 1000; // 5 phút
+const cache = new Map<string, { data: any; timestamp: number }>();
+
+const getCachedData = (key: string) => {
+  const cached = cache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    console.log('📦 Using cached data for:', key);
+    return cached.data;
+  }
+  return null;
+};
+
+const setCachedData = (key: string, data: any) => {
+  cache.set(key, { data, timestamp: Date.now() });
+  console.log('💾 Cached data for:', key);
+};
+
 // Helper function để format thời gian
 const formatTimeAgo = (dateString: string): string => {
   const timeDiff = Date.now() - new Date(dateString).getTime();
@@ -46,19 +64,146 @@ export interface DashboardData {
 }
 
 export const dashboardAPI = {
-  // Lấy menu items và stats theo role - sử dụng API có sẵn
-  getDashboardData: async (role: string): Promise<DashboardData> => {
+  // API tối ưu - gọi 1 lần duy nhất thay vì nhiều API riêng lẻ
+  getDashboardDataOptimized: async (role: string): Promise<DashboardData> => {
+    const cacheKey = `dashboard_${role}`;
+    const cached = getCachedData(cacheKey);
+    
+    if (cached) {
+      return cached;
+    }
+
     try {
-      console.log('🎯 Getting dashboard data for role:', role);
+      console.log('🚀 Getting optimized dashboard data for role:', role);
+      const startTime = Date.now();
       
-      // Lấy stats và activities thực tế từ API
-      const [stats, activities] = await Promise.all([
-        dashboardAPI.getStatsByRole(role),
-        dashboardAPI.getActivitiesByRole(role)
-      ]);
+      let stats: DashboardStats[] = [];
+      let activities: ActivityItem[] = [];
       
-      console.log('📊 Stats from API:', stats);
-      console.log('🎭 Activities from API:', activities);
+      // Parallel loading cho tất cả data
+      if (role === 'Farmer') {
+        const [cropSeasons, warehouseRequests] = await Promise.all([
+          getCropSeasonsForCurrentUser().catch(() => []),
+          getWarehouseInboundRequestsForCurrentUser().catch(() => [])
+        ]);
+        
+        // Tính stats
+        const completedSeasons = cropSeasons.filter(season => season.status === 'Completed');
+        const progressPercentage = cropSeasons.length > 0 
+          ? Math.round((completedSeasons.length / cropSeasons.length) * 100)
+          : 0;
+        
+        stats = [
+          { icon: 'leaf', number: cropSeasons.length.toString(), label: 'Mùa vụ' },
+          { icon: 'package-variant', number: warehouseRequests.length.toString(), label: 'Lô hàng' },
+          { icon: 'chart-line', number: `${progressPercentage}%`, label: 'Tiến độ' },
+        ];
+        
+        // Tính activities
+        const allActivities = [
+          ...cropSeasons.slice(0, 2).map(season => ({
+            icon: 'leaf',
+            title: `Mùa vụ: ${season.name || season.cropSeasonCode || season.seasonName || 'Không có tên'}`,
+            time: formatTimeAgo(season.updatedAt || season.createdAt || new Date().toISOString())
+          })),
+          ...warehouseRequests.slice(0, 1).map(request => ({
+            icon: 'package-variant',
+            title: `Lô hàng: ${request.batchName || request.requestCode || 'Không có tên'}`,
+            time: formatTimeAgo(request.updatedAt || request.createdAt || new Date().toISOString())
+          }))
+        ];
+        
+        activities = allActivities
+          .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+          .slice(0, 3);
+          
+      } else if (role === 'DeliveryStaff') {
+        const { getMyShipments, getDeliveryStatistics } = await import('./delivery.api');
+        
+        const [shipments, statistics] = await Promise.all([
+          getMyShipments().catch(() => []),
+          getDeliveryStatistics().catch(() => null)
+        ]);
+        
+        // Stats
+        const today = new Date();
+        const todayDeliveries = shipments.filter(s => {
+          const shippedDate = new Date(s.shippedAt);
+          return shippedDate.toDateString() === today.toDateString();
+        }).length;
+        
+        stats = [
+          { icon: 'truck-delivery', number: shipments.length.toString(), label: 'Tổng đơn giao' },
+          { icon: 'check-circle', number: todayDeliveries.toString(), label: 'Giao hôm nay' },
+          { icon: 'clock-outline', number: (shipments.filter(s => s.deliveryStatus === 'InTransit').length).toString(), label: 'Đang giao' },
+        ];
+        
+        // Activities
+        const recentShipments = shipments
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+          .slice(0, 3);
+
+        activities = recentShipments.map(shipment => {
+          const timeDiff = Date.now() - new Date(shipment.updatedAt).getTime();
+          const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+          const days = Math.floor(hours / 24);
+          
+          let timeText = '';
+          if (days > 0) {
+            timeText = `${days} ngày trước`;
+          } else if (hours > 0) {
+            timeText = `${hours} giờ trước`;
+          } else {
+            timeText = 'Vừa xong';
+          }
+
+          return {
+            icon: shipment.deliveryStatus === 'Delivered' ? 'check-circle' : 
+                  shipment.deliveryStatus === 'InTransit' ? 'truck-delivery' : 'cellphone',
+            title: `Cập nhật trạng thái: ${shipment.shipmentCode}`,
+            time: timeText
+          };
+        });
+        
+      } else {
+        // Manager/Staff
+        const [cropSeasons, warehouseRequests] = await Promise.all([
+          getCropSeasonsForCurrentUser().catch(() => []),
+          getWarehouseInboundRequestsForCurrentUser().catch(() => [])
+        ]);
+        
+        // Stats
+        const totalItems = cropSeasons.length + warehouseRequests.length;
+        const completedItems = cropSeasons.filter(s => s.status === 'Completed').length + 
+                             warehouseRequests.filter(r => r.status === 'COMPLETED').length;
+        const progressPercentage = totalItems > 0 
+          ? Math.round((completedItems / totalItems) * 100)
+          : 0;
+
+        stats = [
+          { icon: 'leaf', number: cropSeasons.length.toString(), label: 'Mùa vụ' },
+          { icon: 'package-variant', number: warehouseRequests.length.toString(), label: 'Lô hàng' },
+          { icon: 'chart-line', number: `${progressPercentage}%`, label: 'Tiến độ' },
+        ];
+        
+        // Activities
+        const allActivities = [
+          ...cropSeasons.slice(0, 2).map(season => ({
+            icon: 'leaf',
+            title: `Mùa vụ: ${season.name || season.cropSeasonCode || season.seasonName || 'Không có tên'}`,
+            time: formatTimeAgo(season.updatedAt || season.createdAt || new Date().toISOString())
+          })),
+          ...warehouseRequests.slice(0, 1).map(request => ({
+            icon: 'package-variant',
+            title: `Lô hàng: ${request.batchName || request.requestCode || 'Không có tên'}`,
+            time: formatTimeAgo(request.updatedAt || request.createdAt || new Date().toISOString())
+          }))
+        ];
+
+        activities = allActivities
+          .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+          .slice(0, 3);
+      }
       
       const result = {
         menuItems: getFallbackDashboardData(role).menuItems,
@@ -66,12 +211,41 @@ export const dashboardAPI = {
         activities: activities,
       };
       
-      console.log('🎯 Final dashboard data:', result);
+      const loadTime = Date.now() - startTime;
+      console.log(`⚡ Dashboard loaded in ${loadTime}ms for role: ${role}`);
+      
+      // Cache kết quả
+      setCachedData(cacheKey, result);
+      
       return result;
     } catch (error) {
-      console.error('❌ Error getting dashboard data:', error);
+      console.error('❌ Error getting optimized dashboard data:', error);
       return getFallbackDashboardData(role);
     }
+  },
+
+  // API cũ - giữ lại để backward compatibility
+  getDashboardData: async (role: string): Promise<DashboardData> => {
+    return dashboardAPI.getDashboardDataOptimized(role);
+  },
+
+  // Clear cache khi cần
+  clearCache: () => {
+    cache.clear();
+    console.log('🗑️ Dashboard cache cleared');
+  },
+
+  // Force reload - clear cache và load dữ liệu mới
+  forceReload: async (role: string): Promise<DashboardData> => {
+    cache.clear();
+    console.log('🔄 Force reloading dashboard for role:', role);
+    return dashboardAPI.getDashboardDataOptimized(role);
+  },
+
+  // Clear cache cho role cụ thể
+  clearCacheForRole: (role: string) => {
+    cache.delete(`dashboard_${role}`);
+    console.log(`🗑️ Cache cleared for role: ${role}`);
   },
 
   // Lấy hoạt động gần đây theo role
@@ -204,9 +378,7 @@ export const dashboardAPI = {
             getCropSeasonsForCurrentUser().catch(() => []),
             getWarehouseInboundRequestsForCurrentUser().catch(() => [])
           ]);
-          
-          console.log('📊 Crop seasons for stats:', cropSeasons);
-          console.log('📦 Warehouse requests for stats:', warehouseRequests);
+    
 
           // Tính tiến độ dựa trên số mùa vụ đã hoàn thành
           const completedSeasons = cropSeasons.filter(season => season.status === 'Completed');
@@ -215,9 +387,9 @@ export const dashboardAPI = {
             : 0;
 
           const stats = [
-            { icon: '🌱', number: cropSeasons.length.toString(), label: 'Mùa vụ' },
-            { icon: '📦', number: warehouseRequests.length.toString(), label: 'Lô hàng' },
-            { icon: '📊', number: `${progressPercentage}%`, label: 'Tiến độ' },
+            { icon: 'leaf', number: cropSeasons.length.toString(), label: 'Mùa vụ' },
+            { icon: 'package-variant', number: warehouseRequests.length.toString(), label: 'Lô hàng' },
+            { icon: 'chart-line', number: `${progressPercentage}%`, label: 'Tiến độ' },
           ];
           
           console.log('🎯 Final farmer stats:', stats);
@@ -297,9 +469,9 @@ export const dashboardAPI = {
           console.error('❌ Error getting manager stats:', error);
           // Fallback nếu API lỗi
           return [
-            { icon: '🌱', number: '0', label: 'Mùa vụ' },
-            { icon: '📦', number: '0', label: 'Lô hàng' },
-            { icon: '📊', number: '0%', label: 'Tiến độ' },
+            { icon: 'leaf', number: '0', label: 'Mùa vụ' },
+            { icon: 'package-variant', number: '0', label: 'Lô hàng' },
+            { icon: 'chart-line', number: '0%', label: 'Tiến độ' },
           ];
         }
       }
@@ -317,7 +489,7 @@ const getFallbackDashboardData = (role: string): DashboardData => {
       id: 'cropseason',
       title: 'Mùa vụ',
       subtitle: 'Quản lý mùa vụ cà phê',
-      icon: '🌱',
+      icon: 'leaf',
       color: '#10B981',
       route: '/cropseason',
       roles: ['Farmer', 'Manager'],
@@ -326,7 +498,7 @@ const getFallbackDashboardData = (role: string): DashboardData => {
       id: 'warehouse',
       title: 'Kho hàng',
       subtitle: 'Quản lý nhập xuất kho',
-      icon: '🏭',
+      icon: 'warehouse',
       color: '#3B82F6',
       route: '/warehouse',
       roles: ['Farmer', 'Manager', 'Staff'],
@@ -335,21 +507,12 @@ const getFallbackDashboardData = (role: string): DashboardData => {
       id: 'delivery',
       title: 'Giao hàng',
       subtitle: 'Quản lý đơn hàng giao',
-      icon: '🚚',
+      icon: 'truck-delivery',
       color: '#F59E0B',
       route: '/delivery',
       roles: ['DeliveryStaff', 'Manager'],
     },
-    {
-      id: 'orders',
-      title: 'Đơn hàng',
-      subtitle: 'Theo dõi trạng thái đơn hàng',
-      icon: '📋',
-      color: '#8B5CF6',
-      route: '/orders',
-      roles: ['DeliveryStaff', 'Manager'],
-    },
-
+    // Đã xóa phần "Đơn hàng" để tối ưu thao tác nhanh
   ];
 
   const filteredMenuItems = baseMenuItems.filter(item =>
@@ -366,22 +529,22 @@ const getFallbackDashboardData = (role: string): DashboardData => {
 const getFallbackStats = (role: string): DashboardStats[] => {
   if (role === 'DeliveryStaff') {
     return [
-      { icon: '🚚', number: '8', label: 'Đơn giao' },
-      { icon: '✅', number: '5', label: 'Đã giao' },
-      { icon: '⏳', number: '3', label: 'Đang giao' },
+      { icon: 'truck-delivery', number: '8', label: 'Đơn giao' },
+      { icon: 'check-circle', number: '5', label: 'Đã giao' },
+      { icon: 'clock-outline', number: '3', label: 'Đang giao' },
     ];
   } else if (role === 'Farmer') {
     return [
-      { icon: '🌱', number: '4', label: 'Mùa vụ' },
-      { icon: '📦', number: '12', label: 'Lô hàng' },
-      { icon: '📊', number: '85%', label: 'Tiến độ' },
+      { icon: 'leaf', number: '4', label: 'Mùa vụ' },
+      { icon: 'package-variant', number: '12', label: 'Lô hàng' },
+      { icon: 'chart-line', number: '85%', label: 'Tiến độ' },
     ];
   } else {
     // Manager/Staff
     return [
-      { icon: '🌱', number: '15', label: 'Mùa vụ' },
-      { icon: '📦', number: '48', label: 'Lô hàng' },
-      { icon: '📊', number: '92%', label: 'Tiến độ' },
+      { icon: 'leaf', number: '15', label: 'Mùa vụ' },
+      { icon: 'package-variant', number: '48', label: 'Lô hàng' },
+      { icon: 'chart-line', number: '92%', label: 'Tiến độ' },
     ];
   }
 };
@@ -389,22 +552,22 @@ const getFallbackStats = (role: string): DashboardStats[] => {
 const getFallbackActivities = (role: string): ActivityItem[] => {
   if (role === 'DeliveryStaff') {
     return [
-      { icon: '🚚', title: 'Đơn hàng mới được giao', time: '2 giờ trước' },
-      { icon: '✅', title: 'Giao hàng thành công', time: '5 giờ trước' },
-      { icon: '📱', title: 'Cập nhật trạng thái giao hàng', time: '1 ngày trước' },
+      { icon: 'truck-delivery', title: 'Đơn hàng mới được giao', time: '2 giờ trước' },
+      { icon: 'check-circle', title: 'Giao hàng thành công', time: '5 giờ trước' },
+      { icon: 'cellphone', title: 'Cập nhật trạng thái giao hàng', time: '1 ngày trước' },
     ];
-  } else if (role === 'Farmer') {
-    return [
-      { icon: '🌱', title: 'Mùa vụ mới được tạo', time: '2 giờ trước' },
-      { icon: '📦', title: 'Lô hàng đã được nhập kho', time: '5 giờ trước' },
-      { icon: '📊', title: 'Cập nhật tiến độ sản xuất', time: '1 ngày trước' },
-    ];
+      } else if (role === 'Farmer') {
+      return [
+        { icon: 'leaf', title: 'Mùa vụ mới được tạo', time: '2 giờ trước' },
+        { icon: 'package-variant', title: 'Lô hàng đã được nhập kho', time: '5 giờ trước' },
+        { icon: 'chart-line', title: 'Cập nhật tiến độ sản xuất', time: '1 ngày trước' },
+      ];
   } else {
     // Manager/Staff
     return [
-      { icon: '🌱', title: 'Mùa vụ mới được tạo', time: '2 giờ trước' },
-      { icon: '📦', title: 'Lô hàng đã được nhập kho', time: '5 giờ trước' },
-      { icon: '🚚', title: 'Đơn hàng giao mới', time: '1 ngày trước' },
+      { icon: 'leaf', title: 'Mùa vụ mới được tạo', time: '2 giờ trước' },
+      { icon: 'package-variant', title: 'Lô hàng đã được nhập kho', time: '5 giờ trước' },
+      { icon: 'truck-delivery', title: 'Đơn hàng giao mới', time: '1 ngày trước' },
     ];
   }
 };

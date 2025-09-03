@@ -7,7 +7,7 @@ import {
     Alert,
     ActivityIndicator,
 } from 'react-native';
-import { TextInput, Button, Card, Divider } from 'react-native-paper';
+import { TextInput, Button, Card, Divider, Chip } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import Background from '@/components/Background';
 import BackButton from '@/components/BackButton';
 import { createCropSeason, CropSeasonCreatePayload } from '@/core/api/cropSeason.api';
-import { getFarmerCommitments, CommitmentListItem } from '@/core/api/commitment.api';
+import { getAvailableCommitments, FarmingCommitmentViewAllDto } from '@/core/api/commitment.api';
 
 export default function CreateCropSeasonScreen() {
     const router = useRouter();
@@ -36,8 +36,9 @@ export default function CreateCropSeasonScreen() {
 
     // Commitment dropdown states
     const [commitmentOpen, setCommitmentOpen] = useState(false);
-    const [commitments, setCommitments] = useState<CommitmentListItem[]>([]);
+    const [commitments, setCommitments] = useState<FarmingCommitmentViewAllDto[]>([]);
     const [loadingCommitments, setLoadingCommitments] = useState(true);
+    const [selectedCommitment, setSelectedCommitment] = useState<FarmingCommitmentViewAllDto | null>(null);
 
     // Validation states
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -47,16 +48,60 @@ export default function CreateCropSeasonScreen() {
         loadCommitments();
     }, []);
 
+    // Tự động điều chỉnh thời gian mùa vụ khi chọn commitment
+    useEffect(() => {
+        if (selectedCommitment && selectedCommitment.approvedAt) {
+            // Kiểm tra nếu có approvedAt từ commitment
+            const approvedDate = new Date(selectedCommitment.approvedAt);
+
+            // Tính thời gian mùa vụ dựa trên approvedAt
+            // Start date: bắt đầu từ ngày approved (cùng ngày)
+            const seasonStart = new Date(approvedDate);
+
+            // End date: 11 tháng sau start date
+            const seasonEnd = new Date(seasonStart);
+            seasonEnd.setMonth(seasonEnd.getMonth() + 11); // 11 tháng sau start date
+
+            setStartDate(seasonStart);
+            setEndDate(seasonEnd);
+        }
+    }, [selectedCommitment]);
+
+    // Cập nhật selectedCommitment khi selectedCommitmentId thay đổi
+    useEffect(() => {
+        if (selectedCommitmentId && commitments.length > 0) {
+            const commitment = commitments.find(c => c.commitmentId === selectedCommitmentId);
+            setSelectedCommitment(commitment || null);
+        }
+    }, [selectedCommitmentId, commitments]);
+
     const loadCommitments = async () => {
         try {
             setLoadingCommitments(true);
 
-            // Sử dụng API thực tế
-            const response = await getFarmerCommitments();
-            if (response && response.length > 0) {
+            // Thử endpoint chính trước
+            let response;
+            try {
+                response = await getAvailableCommitments();
+            } catch (error) {
+                // Thử endpoint khác nếu endpoint chính thất bại
+                try {
+                    const altResponse = await fetch('/api/FarmingCommitment/Farmer');
+                    if (altResponse.ok) {
+                        response = await altResponse.json();
+                    }
+                } catch (altError) {
+                    // Handle alternative endpoint failure silently
+                }
+            }
+
+            if (response && Array.isArray(response) && response.length > 0) {
+                // Hiển thị tất cả commitment để user có thể chọn
                 setCommitments(response);
-                setSelectedCommitmentId(response[0].id);
+                setSelectedCommitmentId(response[0].commitmentId);
+                setSelectedCommitment(response[0]);
             } else {
+
                 // Nếu không có commitment nào, hiển thị thông báo
                 Alert.alert(
                     'Không có cam kết',
@@ -96,6 +141,8 @@ export default function CreateCropSeasonScreen() {
 
         if (!seasonName.trim()) {
             newErrors.seasonName = 'Tên mùa vụ không được để trống';
+        } else if (seasonName.trim().length < 3) {
+            newErrors.seasonName = 'Tên mùa vụ phải có ít nhất 3 ký tự';
         }
 
         if (!selectedCommitmentId) {
@@ -106,8 +153,25 @@ export default function CreateCropSeasonScreen() {
             newErrors.endDate = 'Ngày kết thúc phải sau ngày bắt đầu';
         }
 
-        if (startDate < new Date()) {
-            newErrors.startDate = 'Ngày bắt đầu không thể là ngày trong quá khứ';
+        // Bỏ validation ngày bắt đầu không thể trong quá khứ
+        // Cho phép nông dân chọn ngày bắt đầu linh hoạt
+
+        // Kiểm tra thời gian mùa vụ phải trong khoảng 11-15 tháng
+        if (startDate && endDate) {
+            const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+                (endDate.getMonth() - startDate.getMonth());
+
+            if (monthsDiff < 11 || monthsDiff > 15) { // Cho phép sai số 2 tháng để xử lý thiên tai
+                newErrors.endDate = 'Thời gian mùa vụ phải trong khoảng 11-15 tháng (có thể kéo dài thêm 2-3 tháng nếu gặp thiên tai)';
+            }
+        }
+
+        // Kiểm tra start date phải sau hoặc bằng ngày approved (nếu có)
+        if (selectedCommitment?.approvedAt && startDate) {
+            const approvedDate = new Date(selectedCommitment.approvedAt);
+            if (startDate < approvedDate) {
+                newErrors.startDate = 'Ngày bắt đầu mùa vụ phải sau hoặc bằng ngày cam kết được duyệt';
+            }
         }
 
         setErrors(newErrors);
@@ -217,11 +281,17 @@ export default function CreateCropSeasonScreen() {
                                     open={commitmentOpen}
                                     value={selectedCommitmentId}
                                     items={commitments.map(commitment => ({
-                                        label: commitment.name,
-                                        value: commitment.id
+                                        label: commitment.commitmentName,
+                                        value: commitment.commitmentId
                                     }))}
                                     setOpen={setCommitmentOpen}
                                     setValue={setSelectedCommitmentId}
+                                    onSelectItem={(item) => {
+                                        if (item) {
+                                            const commitment = commitments.find(c => c.commitmentId === item.value);
+                                            setSelectedCommitment(commitment || null);
+                                        }
+                                    }}
                                     style={styles.dropdown}
                                     dropDownContainerStyle={styles.dropdownContainer}
                                     placeholder="Chọn cam kết"
@@ -302,74 +372,99 @@ export default function CreateCropSeasonScreen() {
                                 style={styles.submitButton}
                                 labelStyle={styles.submitButtonLabel}
                             >
-                                Tạo mùa vụ
+                                {submitting ? 'Đang tạo...' : 'Tạo mùa vụ'}
                             </Button>
+
+                            {/* Thông báo nếu commitment chưa được duyệt */}
+                            {selectedCommitment && !selectedCommitment.approvedAt && (
+                                <View style={styles.warningContainer}>
+                                    <MaterialCommunityIcons name="alert-circle" size={20} color="#F59E0B" />
+                                    <Text style={styles.warningMessage}>
+                                        Cam kết này chưa được duyệt. Bạn vẫn có thể tạo mùa vụ nhưng cần chờ duyệt.
+                                    </Text>
+                                </View>
+                            )}
                         </Card.Content>
                     </Card>
 
                     {/* Selected Commitment Info */}
-                    {selectedCommitmentId && (
+                    {selectedCommitment && (
                         <Card style={styles.infoCard}>
                             <Card.Content>
-                                <Text style={styles.infoTitle}>📋 Thông tin cam kết đã chọn</Text>
+                                <Text style={styles.infoTitle}>Thông tin cam kết đã chọn</Text>
                                 <Divider style={styles.divider} />
 
-                                {(() => {
-                                    const selectedCommitment = commitments.find(c => c.id === selectedCommitmentId);
-                                    if (!selectedCommitment) return null;
+                                <View style={styles.commitmentInfo}>
+                                    <Text style={styles.commitmentName}>{selectedCommitment.commitmentName}</Text>
+                                    <Text style={styles.commitmentCode}>Mã: {selectedCommitment.commitmentCode}</Text>
+                                    <Text style={styles.commitmentDescription}>
+                                        Công ty: {selectedCommitment.companyName}
+                                    </Text>
+                                    <Text style={styles.commitmentDescription}>
+                                        Kế hoạch: {selectedCommitment.planTitle}
+                                    </Text>
 
-                                    return (
-                                        <View style={styles.commitmentInfo}>
-                                            <Text style={styles.commitmentName}>{selectedCommitment.name}</Text>
-                                            <Text style={styles.commitmentCode}>Mã: {selectedCommitment.code}</Text>
-                                            <Text style={styles.commitmentDescription}>
-                                                Loại: {selectedCommitment.coffeeType} | Chất lượng: {selectedCommitment.qualityGrade}
-                                            </Text>
-                                            <Text style={styles.commitmentDescription}>
-                                                Diện tích: {selectedCommitment.totalArea} ha | Sản lượng: {selectedCommitment.totalQuantity} kg
+                                    {/* Hiển thị thông tin từ commitment details */}
+                                    {selectedCommitment.farmingCommitmentDetails && selectedCommitment.farmingCommitmentDetails.length > 0 && (
+                                        <View style={styles.detailsContainer}>
+                                            <Text style={styles.detailsTitle}>Chi tiết sản phẩm:</Text>
+                                            {selectedCommitment.farmingCommitmentDetails.map((detail, index) => (
+                                                <View key={detail.commitmentDetailId} style={styles.detailItem}>
+                                                    <Text style={styles.detailText}>
+                                                        {detail.coffeeTypeName} - {detail.committedQuantity} kg
+                                                    </Text>
+                                                    <Text style={styles.detailText}>
+                                                        Giá: {detail.confirmedPrice?.toLocaleString()} VNĐ/kg
+                                                    </Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    )}
+
+                                    {/* Hiển thị trạng thái */}
+                                    <View style={styles.statusContainer}>
+                                        <Chip
+                                            mode="outlined"
+                                            style={[
+                                                styles.statusChip,
+                                                {
+                                                    borderColor: selectedCommitment.status === 'Active' ? '#10B981' : '#F59E0B',
+                                                    backgroundColor: selectedCommitment.status === 'Active' ? '#D1FAE5' : '#FEF3C7'
+                                                }
+                                            ]}
+                                            textStyle={{
+                                                color: selectedCommitment.status === 'Active' ? '#059669' : '#D97706'
+                                            }}
+                                        >
+                                            {selectedCommitment.status === 'Active' ? 'Đang hoạt động' : 'Chờ duyệt'}
+                                        </Chip>
+                                    </View>
+
+                                    {/* Hiển thị ngày duyệt nếu có */}
+                                    {selectedCommitment.approvedAt && (
+                                        <View style={styles.approvalInfo}>
+                                            <MaterialCommunityIcons name="check-circle" size={16} color="#10B981" />
+                                            <Text style={styles.approvalText}>
+                                                Đã duyệt: {new Date(selectedCommitment.approvedAt).toLocaleDateString('vi-VN')}
                                             </Text>
                                         </View>
-                                    );
-                                })()}
+                                    )}
+
+                                    {/* Thông báo nếu chưa được duyệt */}
+                                    {!selectedCommitment.approvedAt && (
+                                        <View style={styles.warningInfo}>
+                                            <MaterialCommunityIcons name="alert-circle" size={16} color="#F59E0B" />
+                                            <Text style={styles.warningText}>
+                                                Cam kết này chưa được duyệt. Có thể tạo mùa vụ nhưng cần chờ duyệt.
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
                             </Card.Content>
                         </Card>
                     )}
 
-                    {/* Info Card */}
-                    <Card style={styles.infoCard}>
-                        <Card.Content>
-                            <Text style={styles.infoTitle}>📋 Hướng dẫn</Text>
-                            <Divider style={styles.divider} />
 
-                            <View style={styles.infoItem}>
-                                <Text style={styles.infoBullet}>•</Text>
-                                <Text style={styles.infoText}>
-                                    Chọn cam kết phù hợp với loại cây trồng và kế hoạch sản xuất
-                                </Text>
-                            </View>
-
-                            <View style={styles.infoItem}>
-                                <Text style={styles.infoBullet}>•</Text>
-                                <Text style={styles.infoText}>
-                                    Tên mùa vụ nên mô tả rõ ràng về thời gian và loại cây trồng
-                                </Text>
-                            </View>
-
-                            <View style={styles.infoItem}>
-                                <Text style={styles.infoBullet}>•</Text>
-                                <Text style={styles.infoText}>
-                                    Ngày bắt đầu và kết thúc phải hợp lý với chu kỳ sinh trưởng của cây
-                                </Text>
-                            </View>
-
-                            <View style={styles.infoItem}>
-                                <Text style={styles.infoBullet}>•</Text>
-                                <Text style={styles.infoText}>
-                                    Ghi chú có thể mô tả thêm về điều kiện thời tiết, đất đai, hoặc kế hoạch cụ thể
-                                </Text>
-                            </View>
-                        </Card.Content>
-                    </Card>
                 </ScrollView>
 
                 {/* Date Pickers */}
@@ -379,7 +474,6 @@ export default function CreateCropSeasonScreen() {
                         mode="date"
                         display="default"
                         onChange={onStartDateChange}
-                        minimumDate={new Date()}
                     />
                 )}
 
@@ -538,6 +632,68 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     commitmentDescription: {
+        fontSize: 14,
+        color: '#0C4A6E',
+        lineHeight: 20,
+    },
+    statusContainer: {
+        marginTop: 8,
+    },
+    statusChip: {
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+    },
+    approvalInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 8,
+    },
+    approvalText: {
+        fontSize: 14,
+        color: '#10B981',
+        marginLeft: 8,
+    },
+    warningInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 8,
+        backgroundColor: '#FEF3C7',
+        borderRadius: 8,
+        padding: 10,
+    },
+    warningText: {
+        fontSize: 14,
+        color: '#D97706',
+        marginLeft: 8,
+    },
+    warningContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 16,
+        backgroundColor: '#FEF3C7',
+        borderRadius: 8,
+        padding: 10,
+    },
+    warningMessage: {
+        fontSize: 14,
+        color: '#D97706',
+        marginLeft: 8,
+    },
+    detailsContainer: {
+        marginTop: 12,
+        paddingLeft: 16,
+    },
+    detailsTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#0C4A6E',
+        marginBottom: 8,
+    },
+    detailItem: {
+        marginBottom: 8,
+    },
+    detailText: {
         fontSize: 14,
         color: '#0C4A6E',
         lineHeight: 20,

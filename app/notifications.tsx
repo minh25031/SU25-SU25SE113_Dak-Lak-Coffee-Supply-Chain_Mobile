@@ -4,25 +4,26 @@ import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const notifications = [
     {
         id: 1,
-        icon: '🔔',
+        icon: 'bell',
         title: 'Giá cà phê tăng 5%',
         time: '10 phút trước',
         description: 'Giá Robusta hôm nay tăng nhẹ theo thị trường thế giới.',
     },
     {
         id: 2,
-        icon: '📅',
+        icon: 'calendar',
         title: 'Tập huấn kỹ thuật phơi',
         time: '1 giờ trước',
         description: 'Lịch tập huấn sơ chế phơi tĩnh sẽ diễn ra vào ngày 10/06.',
     },
     {
         id: 3,
-        icon: '💬',
+        icon: 'message-text',
         title: 'Phản hồi từ chuyên gia',
         time: 'Hôm qua',
         description: 'Chuyên gia đã phản hồi về sự cố sâu bệnh.',
@@ -45,7 +46,11 @@ export default function NotificationsScreen() {
                 {notifications.map((item) => (
                     <View key={item.id} style={styles.card}>
                         <View style={styles.iconContainer}>
-                            <Text style={styles.iconText}>{item.icon}</Text>
+                            <MaterialCommunityIcons
+                                name={item.icon as any}
+                                size={20}
+                                color="#6B7280"
+                            />
                         </View>
                         <View style={{ flex: 1 }}>
                             <Text style={styles.cardTitle}>{item.title}</Text>
@@ -87,9 +92,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 12,
     },
-    iconText: {
-        fontSize: 20,
-    },
+
     cardTitle: {
         fontWeight: 'bold',
         fontSize: 16,

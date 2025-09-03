@@ -19,7 +19,6 @@ export default function WarehouseRequestDetailScreen() {
   const [batchInfo, setBatchInfo] = useState<any>(null);
 
   useEffect(() => {
-    console.log('📋 Detail screen - ID from params:', id);
     if (id) {
       loadRequestDetail();
     }
@@ -28,43 +27,16 @@ export default function WarehouseRequestDetailScreen() {
   const loadRequestDetail = async () => {
     try {
       setLoading(true);
-      console.log('📋 Loading detail for ID:', id);
       const data = await getWarehouseInboundRequestById(id);
-      console.log('📋 Detail data received:', data);
       setRequest(data);
 
       // Lấy thông tin batch nếu có batchId
       if (data?.batchId) {
-        console.log('📋 Loading batch info for batchId:', data.batchId);
-        console.log('📋 Request data keys:', Object.keys(data));
-        console.log('📋 Full request data:', JSON.stringify(data, null, 2));
-
         const batches = await getProcessingBatchesForFarmer();
-        console.log('📋 All batches fetched:', batches);
-        console.log('📋 Number of batches:', batches.length);
-
-        // Log tất cả batchId để debug
-        batches.forEach((batch, index) => {
-          console.log(`📋 Batch ${index}:`, {
-            batchId: batch.batchId,
-            batchCode: batch.batchCode,
-            totalOutputQuantity: batch.totalOutputQuantity,
-            status: batch.status
-          });
-        });
 
         const batch = batches.find(b => b.batchId === data.batchId);
-        console.log('📋 Batch info found:', batch);
-
-        if (!batch) {
-          console.log('❌ No matching batch found for batchId:', data.batchId);
-          console.log('❌ Available batchIds:', batches.map(b => b.batchId));
-        }
 
         setBatchInfo(batch);
-      } else {
-        console.log('📋 No batchId found in request data');
-        console.log('📋 Available fields in request data:', Object.keys(data || {}));
       }
     } catch (error) {
       console.error('❌ Lỗi tải chi tiết yêu cầu:', error);
@@ -79,7 +51,6 @@ export default function WarehouseRequestDetailScreen() {
 
     // Sử dụng inboundRequestId thay vì id
     const requestId = request.inboundRequestId || request.id;
-    console.log('🔍 Cancelling request with ID:', requestId);
 
     if (!requestId) {
       Alert.alert('Lỗi', 'Không tìm thấy ID yêu cầu để hủy');

@@ -23,10 +23,8 @@ export default function OrdersScreen() {
     const loadOrders = useCallback(async () => {
         try {
             setLoading(true);
-            console.log('📋 Loading orders from API...');
 
             const ordersData = await getAllOrders();
-            console.log('📦 Orders loaded:', ordersData.length);
 
             setOrders(ordersData);
         } catch (error) {
@@ -142,7 +140,7 @@ export default function OrdersScreen() {
             <View style={styles.orderHeader}>
                 <View style={styles.orderInfo}>
                     <Text style={styles.orderNumber}>{item.orderCode}</Text>
-                    <Text style={styles.orderDate}>📅 {formatDate(item.orderDate)}</Text>
+                    <Text style={styles.orderDate}>{formatDate(item.orderDate)}</Text>
                 </View>
                 <View style={styles.statusContainer}>
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
@@ -171,7 +169,7 @@ export default function OrdersScreen() {
                     <Text style={styles.totalLabel}>Tổng cộng:</Text>
                     <Text style={styles.totalAmount}>{formatCurrency(item.totalAmount || 0)}</Text>
                 </View>
-                <Text style={styles.deliveryTime}>⏰ {formatDate(item.actualDeliveryDate)}</Text>
+                <Text style={styles.deliveryTime}>{formatDate(item.actualDeliveryDate)}</Text>
             </View>
         </TouchableOpacity>
     );
@@ -189,7 +187,7 @@ export default function OrdersScreen() {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>📋 Quản lý đơn hàng</Text>
+                <Text style={styles.headerTitle}>Quản lý đơn hàng</Text>
                 <Text style={styles.headerSubtitle}>Theo dõi trạng thái đơn hàng</Text>
             </View>
 

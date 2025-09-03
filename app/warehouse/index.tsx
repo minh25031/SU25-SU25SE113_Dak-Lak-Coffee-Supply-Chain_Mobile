@@ -31,10 +31,11 @@ export default function WarehouseRequestsScreen() {
   const loadRequests = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('🔄 Đang tải danh sách yêu cầu nhập kho...');
+      const startTime = Date.now();
+
       const data = await getWarehouseInboundRequestsForCurrentUser();
-      console.log('📦 Dữ liệu nhận được:', data);
-      console.log('📦 Số lượng yêu cầu:', data?.length || 0);
+
+      const loadTime = Date.now() - startTime;
 
       // Filter locally since API doesn't support search/status params
       let filteredData = data || [];
@@ -46,16 +47,13 @@ export default function WarehouseRequestsScreen() {
       }
 
       if (selectedStatus && selectedStatus !== "all" && Array.isArray(filteredData)) {
-        console.log('🔍 Filtering by status:', selectedStatus);
         filteredData = filteredData.filter(request => {
           const requestStatus = request.status?.toString().toUpperCase();
           const selectedStatusUpper = selectedStatus.toUpperCase();
-          console.log('🔍 Request status:', requestStatus, 'vs selected:', selectedStatusUpper);
           return requestStatus === selectedStatusUpper;
         });
       }
 
-      console.log('🔍 Dữ liệu sau khi filter:', filteredData);
       setRequests(filteredData);
 
       // Tính số lượng cho mỗi trạng thái
@@ -67,7 +65,6 @@ export default function WarehouseRequestsScreen() {
         });
       }
       setStatusCounts(counts);
-      console.log('📊 Status counts:', counts);
     } catch (error) {
       console.error('❌ Lỗi tải danh sách yêu cầu:', error);
     } finally {
@@ -89,7 +86,6 @@ export default function WarehouseRequestsScreen() {
   );
 
   const handleRequestPress = (requestId: string) => {
-    console.log('📋 Navigating to detail:', requestId);
     router.push(`/warehouse/${requestId}`);
   };
 
@@ -100,7 +96,6 @@ export default function WarehouseRequestsScreen() {
         key={requestId}
         request={item}
         onPress={() => {
-          console.log('📋 Clicking request with ID:', requestId);
           if (requestId) {
             handleRequestPress(requestId);
           } else {

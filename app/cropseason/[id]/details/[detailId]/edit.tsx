@@ -105,9 +105,8 @@ export default function EditCropSeasonDetailScreen() {
             newErrors.harvestEnd = 'Ngày kết thúc thu hoạch phải sau ngày bắt đầu';
         }
 
-        if (expectedHarvestStart < new Date()) {
-            newErrors.harvestStart = 'Ngày bắt đầu thu hoạch không thể là ngày trong quá khứ';
-        }
+        // Bỏ validation ngày bắt đầu thu hoạch không thể trong quá khứ
+        // Cho phép nông dân chọn ngày thu hoạch linh hoạt
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -210,7 +209,7 @@ export default function EditCropSeasonDetailScreen() {
                     {/* Detail Info Card */}
                     <Card style={styles.infoCard}>
                         <Card.Content>
-                            <Text style={styles.infoTitle}>📋 Thông tin vùng trồng hiện tại</Text>
+                            <Text style={styles.infoTitle}>Thông tin vùng trồng hiện tại</Text>
                             <Divider style={styles.divider} />
                             <Text style={styles.detailInfo}>
                                 Mùa vụ: {cropSeason.seasonName}
@@ -313,7 +312,7 @@ export default function EditCropSeasonDetailScreen() {
                     {plannedQuality && (
                         <Card style={styles.infoCard}>
                             <Card.Content>
-                                <Text style={styles.infoTitle}>🏆 Chất lượng đã chọn</Text>
+                                <Text style={styles.infoTitle}>Chất lượng đã chọn</Text>
                                 <Divider style={styles.divider} />
                                 <Text style={styles.qualityText}>
                                     {plannedQuality}
@@ -330,7 +329,6 @@ export default function EditCropSeasonDetailScreen() {
                         mode="date"
                         display="default"
                         onChange={onStartDateChange}
-                        minimumDate={new Date()}
                     />
                 )}
 

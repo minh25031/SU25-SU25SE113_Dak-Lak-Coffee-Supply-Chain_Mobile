@@ -11,15 +11,17 @@ import { getCropProgressesByDetailId, CropProgressViewAllDto } from '@/core/api/
 import { getCropStages, CropStage } from '@/core/api/cropStage.api';
 
 export default function CropProgressScreen() {
-    const { id } = useLocalSearchParams();
+    const { id, detailId } = useLocalSearchParams();
     const router = useRouter();
     const cropSeasonId = id as string;
+    const selectedDetailId = detailId as string;
 
     const [cropSeason, setCropSeason] = useState<CropSeason | null>(null);
     const [progresses, setProgresses] = useState<CropProgressViewAllDto[]>([]);
     const [stages, setStages] = useState<CropStage[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [selectedDetail, setSelectedDetail] = useState<any>(null);
 
     const loadData = useCallback(async () => {
         if (!cropSeasonId) return;
@@ -31,25 +33,43 @@ export default function CropProgressScreen() {
             const season = await getCropSeasonById(cropSeasonId);
             if (season) {
                 setCropSeason(season);
+
+                // Tìm vùng trồng được chọn
+                if (selectedDetailId && season.details) {
+                    const detail = season.details.find(d => d.detailId === selectedDetailId);
+                    setSelectedDetail(detail);
+                }
             }
 
             // Load crop stages
             const cropStages = await getCropStages();
             setStages(cropStages);
 
-            // Load progresses for all details
+            // Load progresses for selected detail or all details
             if (season?.details) {
-                const allProgresses: CropProgressViewAllDto[] = [];
-                for (const detail of season.details) {
+                if (selectedDetailId) {
+                    // Chỉ load tiến độ cho vùng trồng được chọn
                     try {
-                        const detailProgresses = await getCropProgressesByDetailId(detail.detailId);
-                        allProgresses.push(...detailProgresses);
+                        const detailProgresses = await getCropProgressesByDetailId(selectedDetailId);
+                        setProgresses(detailProgresses);
                     } catch (error) {
-                        console.error(`Error loading progress for detail ${detail.detailId}:`, error);
-                        // Không dừng loading nếu một detail bị lỗi
+                        console.error(`Error loading progress for detail ${selectedDetailId}:`, error);
+                        setProgresses([]);
                     }
+                } else {
+                    // Load tiến độ cho tất cả vùng trồng
+                    const allProgresses: CropProgressViewAllDto[] = [];
+                    for (const detail of season.details) {
+                        try {
+                            const detailProgresses = await getCropProgressesByDetailId(detail.detailId);
+                            allProgresses.push(...detailProgresses);
+                        } catch (error) {
+                            console.error(`Error loading progress for detail ${detail.detailId}:`, error);
+                            // Không dừng loading nếu một detail bị lỗi
+                        }
+                    }
+                    setProgresses(allProgresses);
                 }
-                setProgresses(allProgresses);
             }
         } catch (error) {
             console.error('❌ Error loading data:', error);
@@ -66,7 +86,7 @@ export default function CropProgressScreen() {
         } finally {
             setLoading(false);
         }
-    }, [cropSeasonId]);
+    }, [cropSeasonId, selectedDetailId]);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -154,7 +174,12 @@ export default function CropProgressScreen() {
                 {/* Header */}
                 <View style={styles.header}>
                     <BackButton goBack={() => router.back()} />
-                    <Text style={styles.headerTitle}>Tiến độ trồng trọt</Text>
+                    <Text style={styles.headerTitle}>
+                        {selectedDetail
+                            ? `Tiến độ - ${selectedDetail.typeName || 'Vùng trồng'}`
+                            : 'Tiến độ trồng trọt'
+                        }
+                    </Text>
                     <View style={{ width: 40 }} />
                 </View>
 
@@ -196,10 +221,74 @@ export default function CropProgressScreen() {
                         </Card.Content>
                     </Card>
 
+                    {/* Selected Detail Info Card */}
+                    {selectedDetail && (
+                        <Card style={styles.card}>
+                            <Card.Content>
+                                <Text style={styles.cardTitle}>Vùng trồng được chọn</Text>
+                                <Divider style={styles.divider} />
+
+                                <View style={styles.detailInfo}>
+                                    <View style={styles.infoRow}>
+                                        <MaterialCommunityIcons name="leaf" size={16} color="#10B981" />
+                                        <Text style={styles.infoLabel}>Loại cây:</Text>
+                                        <Text style={styles.infoValue}>{selectedDetail.typeName || 'N/A'}</Text>
+                                    </View>
+
+                                    <View style={styles.infoRow}>
+                                        <MaterialCommunityIcons name="map-marker-radius" size={16} color="#3B82F6" />
+                                        <Text style={styles.infoLabel}>Diện tích:</Text>
+                                        <Text style={styles.infoValue}>{selectedDetail.areaAllocated || 0} ha</Text>
+                                    </View>
+
+                                    {selectedDetail.expectedHarvestStart && (
+                                        <View style={styles.infoRow}>
+                                            <MaterialCommunityIcons name="calendar-check" size={16} color="#F59E0B" />
+                                            <Text style={styles.infoLabel}>Thu hoạch:</Text>
+                                            <Text style={styles.infoValue}>
+                                                {formatDate(selectedDetail.expectedHarvestStart)} - {formatDate(selectedDetail.expectedHarvestEnd)}
+                                            </Text>
+                                        </View>
+                                    )}
+
+                                    {selectedDetail.estimatedYield && (
+                                        <View style={styles.infoRow}>
+                                            <MaterialCommunityIcons name="scale" size={16} color="#8B5CF6" />
+                                            <Text style={styles.infoLabel}>Sản lượng dự kiến:</Text>
+                                            <Text style={styles.infoValue}>{selectedDetail.estimatedYield} kg</Text>
+                                        </View>
+                                    )}
+
+                                    {/* Hiển thị sản lượng thực tế */}
+                                    <View style={styles.infoRow}>
+                                        <MaterialCommunityIcons name="scale-balance" size={16} color="#EF4444" />
+                                        <Text style={styles.infoLabel}>Sản lượng thực tế:</Text>
+                                        <Text style={styles.infoValue}>
+                                            {(() => {
+                                                // Tìm tiến độ thu hoạch để lấy sản lượng thực tế
+                                                const harvestProgress = progresses.find(p => {
+                                                    const stage = stages.find(s => s.stageId === p.stageId);
+                                                    return stage?.stageCode?.toLowerCase() === 'harvesting' && p.actualYield;
+                                                });
+
+                                                if (harvestProgress?.actualYield) {
+                                                    return `${harvestProgress.actualYield} kg`;
+                                                }
+                                                return 'Chưa thu hoạch';
+                                            })()}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </Card.Content>
+                        </Card>
+                    )}
+
                     {/* Progress Summary Card */}
                     <Card style={styles.card}>
                         <Card.Content>
-                            <Text style={styles.cardTitle}>Tổng quan tiến độ</Text>
+                            <Text style={styles.cardTitle}>
+                                {selectedDetail ? 'Tổng quan tiến độ vùng trồng' : 'Tổng quan tiến độ'}
+                            </Text>
                             <Divider style={styles.divider} />
 
                             <View style={styles.summaryGrid}>
@@ -210,9 +299,11 @@ export default function CropProgressScreen() {
 
                                 <View style={styles.summaryItem}>
                                     <Text style={styles.summaryNumber}>
-                                        {cropSeason.details?.length || 0}
+                                        {selectedDetail ? 1 : (cropSeason.details?.length || 0)}
                                     </Text>
-                                    <Text style={styles.summaryLabel}>Vùng trồng</Text>
+                                    <Text style={styles.summaryLabel}>
+                                        {selectedDetail ? 'Vùng trồng' : 'Vùng trồng'}
+                                    </Text>
                                 </View>
 
                                 <View style={styles.summaryItem}>
@@ -277,19 +368,22 @@ export default function CropProgressScreen() {
                                                 </View>
                                             </View>
 
+                                            {/* Hiển thị thông tin vùng trồng khi xem tất cả */}
+                                            {!selectedDetail && progress.cropSeasonDetailId && cropSeason?.details && (
+                                                <View style={styles.detailInfo}>
+                                                    <MaterialCommunityIcons name="map-marker" size={16} color="#6B7280" />
+                                                    <Text style={styles.detailText}>
+                                                        Vùng trồng: {cropSeason.details.find(d => d.detailId === progress.cropSeasonDetailId)?.typeName || 'N/A'}
+                                                    </Text>
+                                                </View>
+                                            )}
+
+
+
                                             {progress.note && (
                                                 <Text style={styles.progressNote} numberOfLines={2}>
                                                     {progress.note}
                                                 </Text>
-                                            )}
-
-                                            {progress.actualYield && (
-                                                <View style={styles.yieldInfo}>
-                                                    <MaterialCommunityIcons name="scale" size={16} color="#6B7280" />
-                                                    <Text style={styles.yieldText}>
-                                                        Sản lượng: {progress.actualYield} kg
-                                                    </Text>
-                                                </View>
                                             )}
                                         </View>
                                     ))}
@@ -331,7 +425,29 @@ export default function CropProgressScreen() {
                 <FAB
                     icon="plus"
                     style={styles.fab}
-                    onPress={handleAddProgress}
+                    onPress={() => {
+                        if (cropSeason?.details && cropSeason.details.length > 0) {
+                            if (selectedDetailId) {
+                                // Nếu đã chọn vùng trồng, chuyển thẳng đến create
+                                router.push(`/cropseason/${cropSeasonId}/progress/create?detailId=${selectedDetailId}`);
+                            } else if (cropSeason.details.length === 1) {
+                                // Nếu chỉ có 1 vùng trồng, chuyển thẳng đến create
+                                router.push(`/cropseason/${cropSeasonId}/progress/create?detailId=${cropSeason.details[0].detailId}`);
+                            } else {
+                                // Nếu có nhiều vùng trồng, hiển thị dialog chọn
+                                Alert.alert(
+                                    'Chọn vùng trồng',
+                                    'Vui lòng chọn vùng trồng để thêm tiến độ',
+                                    cropSeason.details.map(detail => ({
+                                        text: `${detail.typeName || 'Vùng trồng'} (${detail.areaAllocated || 0} ha)`,
+                                        onPress: () => router.push(`/cropseason/${cropSeasonId}/progress/create?detailId=${detail.detailId}`)
+                                    }))
+                                );
+                            }
+                        } else {
+                            Alert.alert('Không có vùng trồng', 'Mùa vụ này chưa có vùng trồng nào');
+                        }
+                    }}
                     label="Thêm tiến độ"
                 />
             </View>
@@ -528,5 +644,13 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         backgroundColor: '#FD7622',
+    },
+    detailInfo: {
+        gap: 8,
+    },
+    detailText: {
+        fontSize: 12,
+        color: '#6B7280',
+        marginLeft: 20,
     },
 });
