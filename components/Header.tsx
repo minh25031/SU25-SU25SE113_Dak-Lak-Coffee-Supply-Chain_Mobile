@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type Props = {
     text: React.ReactNode;
     rightElement?: React.ReactNode;
+    title: string;
+    showBack?: boolean;
 };
 
 export default function Header({ text, rightElement }: Props) {

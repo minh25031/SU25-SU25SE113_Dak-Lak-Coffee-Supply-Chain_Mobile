@@ -9,7 +9,7 @@ const cache = new Map<string, { data: any; timestamp: number }>();
 const getCachedData = (key: string) => {
   const cached = cache.get(key);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log('📦 Using cached data for:', key);
+    // Using cached data
     return cached.data;
   }
   return null;
@@ -17,7 +17,7 @@ const getCachedData = (key: string) => {
 
 const setCachedData = (key: string, data: any) => {
   cache.set(key, { data, timestamp: Date.now() });
-  console.log('💾 Cached data for:', key);
+  // Cached data
 };
 
 // Helper function để format thời gian
@@ -74,7 +74,7 @@ export const dashboardAPI = {
     }
 
     try {
-      console.log('🚀 Getting optimized dashboard data for role:', role);
+      // Getting optimized dashboard data
       const startTime = Date.now();
       
       let stats: DashboardStats[] = [];
@@ -212,14 +212,14 @@ export const dashboardAPI = {
       };
       
       const loadTime = Date.now() - startTime;
-      console.log(`⚡ Dashboard loaded in ${loadTime}ms for role: ${role}`);
+      // Dashboard loaded
       
       // Cache kết quả
       setCachedData(cacheKey, result);
       
       return result;
     } catch (error) {
-      console.error('❌ Error getting optimized dashboard data:', error);
+      console.error('Error getting optimized dashboard data:', error);
       return getFallbackDashboardData(role);
     }
   },
@@ -232,20 +232,20 @@ export const dashboardAPI = {
   // Clear cache khi cần
   clearCache: () => {
     cache.clear();
-    console.log('🗑️ Dashboard cache cleared');
+    // Dashboard cache cleared
   },
 
   // Force reload - clear cache và load dữ liệu mới
   forceReload: async (role: string): Promise<DashboardData> => {
     cache.clear();
-    console.log('🔄 Force reloading dashboard for role:', role);
+    // Force reloading dashboard
     return dashboardAPI.getDashboardDataOptimized(role);
   },
 
   // Clear cache cho role cụ thể
   clearCacheForRole: (role: string) => {
     cache.delete(`dashboard_${role}`);
-    console.log(`🗑️ Cache cleared for role: ${role}`);
+    // Cache cleared for role
   },
 
   // Lấy hoạt động gần đây theo role
@@ -256,9 +256,9 @@ export const dashboardAPI = {
         const { getMyShipments } = await import('./delivery.api');
         
         try {
-          console.log('🚚 Getting delivery staff activities...');
+          // Getting delivery staff activities
           const shipments = await getMyShipments();
-          console.log('📦 Shipments for activities:', shipments);
+          // Shipments for activities
           
           const recentShipments = shipments
             .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
@@ -279,90 +279,88 @@ export const dashboardAPI = {
             }
 
             return {
-              icon: shipment.deliveryStatus === 'Delivered' ? '✅' : 
-                    shipment.deliveryStatus === 'InTransit' ? '🚚' : '📱',
+              icon: shipment.deliveryStatus === 'Delivered' ? 'check-circle' : 
+                    shipment.deliveryStatus === 'InTransit' ? 'truck-delivery' : 'cellphone',
               title: `Cập nhật trạng thái: ${shipment.shipmentCode}`,
               time: timeText
             };
           });
           
-          console.log('🎯 Final delivery staff activities:', activities);
+          // Final delivery staff activities
           return activities;
         } catch (error) {
-          console.error('❌ Error getting delivery activities:', error);
+          console.error('Error getting delivery activities:', error);
           return getFallbackActivities(role);
         }
       } else if (role === 'Farmer') {
         // Lấy hoạt động thực tế từ API farmer
         try {
-          console.log('🌱 Getting farmer activities...');
+          // Getting farmer activities
           const [cropSeasons, warehouseRequests] = await Promise.all([
             getCropSeasonsForCurrentUser().catch(() => []),
             getWarehouseInboundRequestsForCurrentUser().catch(() => [])
           ]);
           
-          console.log('📊 Crop seasons data:', cropSeasons);
-          console.log('📦 Warehouse requests data:', warehouseRequests);
+          // Crop seasons and warehouse requests data
 
           const allActivities = [
             ...cropSeasons.map(season => ({
-              icon: '🌱',
+              icon: 'leaf',
               title: `Mùa vụ: ${season.name || season.cropSeasonCode || season.seasonName || 'Không có tên'}`,
               time: formatTimeAgo(season.updatedAt || season.createdAt || new Date().toISOString())
             })),
             ...warehouseRequests.map(request => ({
-              icon: '📦',
+              icon: 'package-variant',
               title: `Lô hàng: ${request.batchName || request.requestCode || 'Không có tên'}`,
               time: formatTimeAgo(request.updatedAt || request.createdAt || new Date().toISOString())
             }))
           ];
 
-          console.log('🎯 Final activities:', allActivities);
+          // Final activities
 
           return allActivities
             .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
             .slice(0, 3);
         } catch (error) {
-          console.error('❌ Error getting farmer activities:', error);
+          console.error('Error getting farmer activities:', error);
           return getFallbackActivities(role);
         }
       } else {
         // Manager/Staff - Lấy hoạt động tổng hợp
         try {
-          console.log('👔 Getting manager/staff activities...');
+          // Getting manager/staff activities
           const [cropSeasons, warehouseRequests] = await Promise.all([
             getCropSeasonsForCurrentUser().catch(() => []),
             getWarehouseInboundRequestsForCurrentUser().catch(() => [])
           ]);
           
-          console.log('📊 Crop seasons data:', cropSeasons);
-          console.log('📦 Warehouse requests data:', warehouseRequests);
+          // Crop seasons and warehouse requests data
 
           const allActivities = [
             ...cropSeasons.map(season => ({
-              icon: '🌱',
+              icon: 'leaf',
               title: `Mùa vụ: ${season.name || season.cropSeasonCode || season.seasonName || 'Không có tên'}`,
               time: formatTimeAgo(season.updatedAt || season.createdAt || new Date().toISOString())
             })),
             ...warehouseRequests.map(request => ({
-              icon: '📦',
+              icon: 'package-variant',
               title: `Lô hàng: ${request.batchName || request.requestCode || 'Không có tên'}`,
               time: formatTimeAgo(request.updatedAt || request.createdAt || new Date().toISOString())
             }))
           ];
 
-          console.log('🎯 Final activities:', allActivities);
+          // Final activities
 
           return allActivities
             .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
             .slice(0, 3);
         } catch (error) {
-          console.error('❌ Error getting manager activities:', error);
+          console.error('Error getting manager activities:', error);
           return getFallbackActivities(role);
         }
       }
     } catch (error) {
-      console.error('❌ Error getting activities by role:', error);
+      console.error('Error getting activities by role:', error);
       return getFallbackActivities(role);
     }
   },
@@ -373,7 +371,7 @@ export const dashboardAPI = {
       if (role === 'Farmer') {
         // Sử dụng API có sẵn để lấy stats thực tế
         try {
-          console.log('🌱 Getting farmer stats...');
+          // Getting farmer stats
           const [cropSeasons, warehouseRequests] = await Promise.all([
             getCropSeasonsForCurrentUser().catch(() => []),
             getWarehouseInboundRequestsForCurrentUser().catch(() => [])
@@ -392,10 +390,10 @@ export const dashboardAPI = {
             { icon: 'chart-line', number: `${progressPercentage}%`, label: 'Tiến độ' },
           ];
           
-          console.log('🎯 Final farmer stats:', stats);
+          // Final farmer stats
           return stats;
         } catch (error) {
-          console.error('❌ Error getting farmer stats:', error);
+          console.error('Error getting farmer stats:', error);
           return getFallbackStats(role);
         }
       } else if (role === 'DeliveryStaff') {
@@ -403,14 +401,13 @@ export const dashboardAPI = {
         const { getMyShipments, getDeliveryStatistics } = await import('./delivery.api');
         
         try {
-          console.log('🚚 Getting delivery staff stats...');
+          // Getting delivery staff stats
           const [shipments, statistics] = await Promise.all([
             getMyShipments().catch(() => []),
             getDeliveryStatistics().catch(() => null)
           ]);
           
-          console.log('📦 Shipments for stats:', shipments);
-          console.log('📊 Statistics for stats:', statistics);
+          // Shipments and statistics for stats
 
           const today = new Date();
           const todayDeliveries = shipments.filter(s => {
@@ -419,35 +416,34 @@ export const dashboardAPI = {
           }).length;
 
           const stats = [
-            { icon: '🚚', number: shipments.length.toString(), label: 'Tổng đơn giao' },
-            { icon: '✅', number: todayDeliveries.toString(), label: 'Giao hôm nay' },
-            { icon: '⏳', number: (shipments.filter(s => s.deliveryStatus === 'InTransit').length).toString(), label: 'Đang giao' },
+            { icon: 'truck-delivery', number: shipments.length.toString(), label: 'Tổng đơn giao' },
+            { icon: 'check-circle', number: todayDeliveries.toString(), label: 'Giao hôm nay' },
+            { icon: 'clock-outline', number: (shipments.filter(s => s.deliveryStatus === 'InTransit').length).toString(), label: 'Đang giao' },
           ];
           
-          console.log('🎯 Final delivery staff stats:', stats);
+          // Final delivery staff stats
           return stats;
         } catch (error) {
-          console.error('❌ Error getting delivery stats:', error);
+          console.error('Error getting delivery stats:', error);
           // Fallback nếu API lỗi
           return [
-            { icon: '🚚', number: '0', label: 'Tổng đơn giao' },
-            { icon: '✅', number: '0', label: 'Giao hôm nay' },
-            { icon: '⏳', number: '0', label: 'Đang giao' },
+            { icon: 'truck-delivery', number: '0', label: 'Tổng đơn giao' },
+            { icon: 'check-circle', number: '0', label: 'Giao hôm nay' },
+            { icon: 'clock-outline', number: '0', label: 'Đang giao' },
           ];
         }
       } else {
         // Manager/Staff - Lấy stats tổng hợp
         try {
-          console.log('👔 Getting manager/staff stats...');
+          // Getting manager/staff stats
           const [cropSeasons, warehouseRequests, shipments] = await Promise.all([
             getCropSeasonsForCurrentUser().catch(() => []),
             getWarehouseInboundRequestsForCurrentUser().catch(() => []),
-            // TODO: Thêm API lấy shipments cho Manager/Staff khi có
+            // Thêm API lấy shipments cho Manager/Staff khi có
             Promise.resolve([])
           ]);
           
-          console.log('📊 Crop seasons for stats:', cropSeasons);
-          console.log('📦 Warehouse requests for stats:', warehouseRequests);
+          // Crop seasons and warehouse requests for stats
 
           // Tính tiến độ tổng thể
           const totalItems = cropSeasons.length + warehouseRequests.length;
@@ -458,15 +454,15 @@ export const dashboardAPI = {
             : 0;
 
           const stats = [
-            { icon: '🌱', number: cropSeasons.length.toString(), label: 'Mùa vụ' },
-            { icon: '📦', number: warehouseRequests.length.toString(), label: 'Lô hàng' },
-            { icon: '📊', number: `${progressPercentage}%`, label: 'Tiến độ' },
+            { icon: 'leaf', number: cropSeasons.length.toString(), label: 'Mùa vụ' },
+            { icon: 'package-variant', number: warehouseRequests.length.toString(), label: 'Lô hàng' },
+            { icon: 'chart-line', number: `${progressPercentage}%`, label: 'Tiến độ' },
           ];
           
-          console.log('🎯 Final manager/staff stats:', stats);
+          // Final manager/staff stats
           return stats;
         } catch (error) {
-          console.error('❌ Error getting manager stats:', error);
+          console.error('Error getting manager stats:', error);
           // Fallback nếu API lỗi
           return [
             { icon: 'leaf', number: '0', label: 'Mùa vụ' },
@@ -476,7 +472,7 @@ export const dashboardAPI = {
         }
       }
     } catch (error) {
-      console.error('❌ Error getting stats by role:', error);
+      console.error('Error getting stats by role:', error);
       return getFallbackStats(role);
     }
   },

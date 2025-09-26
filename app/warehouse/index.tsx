@@ -1,22 +1,22 @@
 import BackButton from "@/components/BackButton";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { ErrorMessage } from "@/components/common/ErrorMessage";
+import { EmptyState } from "@/components/common/EmptyState";
+import { useWarehouseRequest } from "@/core/hooks/useWarehouseRequest";
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View, FlatList } from 'react-native';
-import { ActivityIndicator, Button, FAB, Searchbar } from 'react-native-paper';
+import React, { useCallback, useState, useMemo } from 'react';
+import { RefreshControl, StyleSheet, Text, View, FlatList } from 'react-native';
+import { FAB as Fab, Searchbar } from 'react-native-paper';
 import DropDownPicker from "react-native-dropdown-picker";
 
-import Background from '@/components/Background';
 import WarehouseRequestCard from '@/components/WarehouseRequestCard';
-import { getWarehouseInboundRequestsForCurrentUser, WarehouseInboundRequestListItem } from '@/core/api/warehouseRequest.api';
+import { WarehouseInboundRequestListItem } from '@/core/api/warehouseRequest.api';
 
 export default function WarehouseRequestsScreen() {
   const router = useRouter();
-  const [requests, setRequests] = useState<WarehouseInboundRequestListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { requests: allRequests, loading, refreshing, error, onRefresh } = useWarehouseRequest();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>("all");
-  const [statusCounts, setStatusCounts] = useState<{ [key: string]: number }>({});
 
   const [statusOpen, setStatusOpen] = useState(false);
   const [statusItems, setStatusItems] = useState([
@@ -28,61 +28,36 @@ export default function WarehouseRequestsScreen() {
     { label: "Hoàn thành", value: "COMPLETED" },
   ]);
 
-  const loadRequests = useCallback(async () => {
-    try {
-      setLoading(true);
-      const startTime = Date.now();
+  // Filter and search data
+  const filteredRequests = useMemo(() => {
+    if (!allRequests || !Array.isArray(allRequests)) return [];
 
-      const data = await getWarehouseInboundRequestsForCurrentUser();
+    let filtered = allRequests;
 
-      const loadTime = Date.now() - startTime;
-
-      // Filter locally since API doesn't support search/status params
-      let filteredData = data || [];
-
-      if (searchQuery && Array.isArray(filteredData)) {
-        filteredData = filteredData.filter(request =>
-          request.batchName?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      }
-
-      if (selectedStatus && selectedStatus !== "all" && Array.isArray(filteredData)) {
-        filteredData = filteredData.filter(request => {
-          const requestStatus = request.status?.toString().toUpperCase();
-          const selectedStatusUpper = selectedStatus.toUpperCase();
-          return requestStatus === selectedStatusUpper;
-        });
-      }
-
-      setRequests(filteredData);
-
-      // Tính số lượng cho mỗi trạng thái
-      const counts: { [key: string]: number } = {};
-      if (data && Array.isArray(data)) {
-        data.forEach(request => {
-          const status = request.status?.toString().toUpperCase() || 'UNKNOWN';
-          counts[status] = (counts[status] || 0) + 1;
-        });
-      }
-      setStatusCounts(counts);
-    } catch (error) {
-      console.error('❌ Lỗi tải danh sách yêu cầu:', error);
-    } finally {
-      setLoading(false);
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(request =>
+        request.batchName?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
-  }, [searchQuery, selectedStatus]);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadRequests();
-    setRefreshing(false);
-  }, [loadRequests]);
+    // Filter by status
+    if (selectedStatus && selectedStatus !== "all") {
+      filtered = filtered.filter(request => {
+        const requestStatus = request.status?.toString().toUpperCase();
+        const selectedStatusUpper = selectedStatus.toUpperCase();
+        return requestStatus === selectedStatusUpper;
+      });
+    }
 
-  // Refresh data when screen comes into focus (e.g., after creating a new request)
+    return filtered;
+  }, [allRequests, searchQuery, selectedStatus]);
+
+  // Refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadRequests();
-    }, [loadRequests])
+      onRefresh();
+    }, [onRefresh])
   );
 
   const handleRequestPress = (requestId: string) => {
@@ -99,7 +74,7 @@ export default function WarehouseRequestsScreen() {
           if (requestId) {
             handleRequestPress(requestId);
           } else {
-            console.error('❌ No valid ID found for request:', item);
+            console.error('No valid ID found for request:', item);
           }
         }}
       />
@@ -107,12 +82,11 @@ export default function WarehouseRequestsScreen() {
   };
 
   if (loading && !refreshing) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FD7622" />
-        <Text style={styles.loadingText}>Đang tải danh sách yêu cầu...</Text>
-      </View>
-    );
+    return <LoadingSpinner message="Đang tải danh sách yêu cầu..." />;
+  }
+
+  if (error) {
+    return <ErrorMessage message={error} onRetry={onRefresh} />;
   }
 
   return (
@@ -153,19 +127,21 @@ export default function WarehouseRequestsScreen() {
       </View>
 
       {/* Content */}
-      {requests.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Không có yêu cầu nhập kho nào</Text>
-          <Text style={styles.emptySubText}>
-            {selectedStatus === "all"
+      {filteredRequests.length === 0 ? (
+        <EmptyState
+          icon="warehouse"
+          title="Không có yêu cầu nhập kho nào"
+          subtitle={
+            selectedStatus === "all"
               ? "Bạn chưa có yêu cầu nhập kho nào. Hãy tạo yêu cầu đầu tiên!"
-              : `Không có yêu cầu nào với trạng thái "${selectedStatus !== "all" && statusItems.find(item => item.value === selectedStatus)?.label || "không xác định"}"`
-            }
-          </Text>
-        </View>
+              : `Không có yêu cầu nào với trạng thái "${statusItems.find(item => item.value === selectedStatus)?.label || "không xác định"}"`
+          }
+          actionText="Tạo yêu cầu"
+          onAction={() => router.push('/warehouse/create')}
+        />
       ) : (
         <FlatList
-          data={requests}
+          data={filteredRequests}
           renderItem={renderItem}
           keyExtractor={(item) => (item.inboundRequestId || item.id || item.requestId || item.warehouseInboundRequestId)?.toString() || Math.random().toString()}
           contentContainerStyle={styles.listContainer}
@@ -182,7 +158,7 @@ export default function WarehouseRequestsScreen() {
       )}
 
       {/* FAB for Create */}
-      <FAB
+      <Fab
         icon="plus"
         style={styles.fab}
         onPress={() => router.push('/warehouse/create')}

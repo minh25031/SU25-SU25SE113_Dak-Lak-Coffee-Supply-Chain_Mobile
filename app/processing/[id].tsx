@@ -1,76 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Card, Button, Divider, ActivityIndicator } from 'react-native-paper';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React from 'react';
+import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Button, Card } from 'react-native-paper';
 
-import Background from '@/components/Background';
 import BackButton from '@/components/BackButton';
-import { processingAPI, ProcessingBatchDetail } from '@/core/api/processing.api';
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return '#10B981';
-    case 'processing':
-      return '#F59E0B';
-    case 'pending':
-      return '#6B7280';
-    case 'failed':
-      return '#EF4444';
-    default:
-      return '#6B7280';
-  }
-};
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return 'Hoàn thành';
-    case 'processing':
-      return 'Đang xử lý';
-    case 'pending':
-      return 'Chờ xử lý';
-    case 'failed':
-      return 'Thất bại';
-    default:
-      return 'Không xác định';
-  }
-};
+import Background from '@/components/Background';
+import { StatusBadge } from '@/components/common/StatusBadge';
+import { useProcessingBatch } from '@/core/hooks/useProcessingBatch';
+import { Colors } from '@/core/constants/colors';
 
 export default function ProcessingBatchDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const [batchDetail, setBatchDetail] = useState<ProcessingBatchDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchBatchDetail = async () => {
-    if (!id) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await processingAPI.getBatchById(id as string);
-      setBatchDetail(data);
-    } catch (err) {
-      console.error('Error fetching batch detail:', err);
-      setError('Không thể tải thông tin lô sơ chế');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchBatchDetail();
-    setRefreshing(false);
-  };
-
-  useEffect(() => {
-    fetchBatchDetail();
-  }, [id, fetchBatchDetail]);
+  const { batchDetail, loading, refreshing, error, onRefresh, deleteBatch } = useProcessingBatch(id as string);
 
   const handleUpdateProgress = () => {
     Alert.alert('Thông báo', 'Tính năng cập nhật tiến độ sẽ được phát triển sau');
@@ -93,14 +36,14 @@ export default function ProcessingBatchDetailScreen() {
         {
           text: 'Xóa',
           style: 'destructive',
-          onPress: async () => {
-            if (!id) return;
-            try {
-              await processingAPI.deleteBatch(id as string);
-              router.back();
-            } catch (err) {
-              Alert.alert('Lỗi', 'Không thể xóa lô sơ chế');
-            }
+          onPress: () => {
+            deleteBatch()
+              .then(() => {
+                router.back();
+              })
+              .catch(() => {
+                Alert.alert('Lỗi', 'Không thể xóa lô sơ chế');
+              });
           }
         }
       ]
@@ -129,7 +72,7 @@ export default function ProcessingBatchDetailScreen() {
           </View>
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error || 'Không tìm thấy thông tin lô sơ chế'}</Text>
-            <TouchableOpacity onPress={fetchBatchDetail} style={styles.retryButton}>
+            <TouchableOpacity onPress={onRefresh} style={styles.retryButton}>
               <Text style={styles.retryText}>Thử lại</Text>
             </TouchableOpacity>
           </View>
@@ -160,11 +103,7 @@ export default function ProcessingBatchDetailScreen() {
             <Card.Content>
               <View style={styles.batchHeader}>
                 <Text style={styles.batchCode}>{batchDetail.batchCode}</Text>
-                <Badge
-                  style={[styles.statusBadge, { backgroundColor: getStatusColor(batchDetail.status) }]}
-                >
-                  {getStatusText(batchDetail.status)}
-                </Badge>
+                <StatusBadge status={batchDetail.status} type="processing" />
               </View>
 
               {batchDetail.description && (
@@ -204,7 +143,7 @@ export default function ProcessingBatchDetailScreen() {
                         styles.progressFill,
                         {
                           width: `${batchDetail.progress}%`,
-                          backgroundColor: getStatusColor(batchDetail.status)
+                          backgroundColor: Colors.primary
                         }
                       ]}
                     />
@@ -232,11 +171,7 @@ export default function ProcessingBatchDetailScreen() {
                     <View style={styles.stageInfo}>
                       <View style={styles.stageHeader}>
                         <Text style={styles.stageName}>{stage.name}</Text>
-                        <Badge
-                          style={[styles.stageBadge, { backgroundColor: getStatusColor(stage.status) }]}
-                        >
-                          {getStatusText(stage.status)}
-                        </Badge>
+                        <StatusBadge status={stage.status} type="processing" size="small" />
                       </View>
                       {stage.outputQuantity && (
                         <Text style={styles.stageOutput}>Sản lượng: {stage.outputQuantity} kg</Text>
@@ -258,7 +193,7 @@ export default function ProcessingBatchDetailScreen() {
                 <Text style={styles.sectionTitle}>Thông số xử lý</Text>
                 <View style={styles.parametersGrid}>
                   {batchDetail.parameters.map((param, index) => (
-                    <View key={index} style={styles.parameterItem}>
+                    <View key={`param-${param.name}-${index}`} style={styles.parameterItem}>
                       <Text style={styles.parameterName}>{param.name}</Text>
                       <Text style={styles.parameterValue}>
                         {param.value}{param.unit}

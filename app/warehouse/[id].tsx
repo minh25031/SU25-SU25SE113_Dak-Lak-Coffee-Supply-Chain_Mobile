@@ -22,7 +22,7 @@ export default function WarehouseRequestDetailScreen() {
     if (id) {
       loadRequestDetail();
     }
-  }, [id, loadRequestDetail]);
+  }, [id]);
 
   const loadRequestDetail = async () => {
     try {
@@ -50,7 +50,7 @@ export default function WarehouseRequestDetailScreen() {
     if (!request) return;
 
     // Sử dụng inboundRequestId thay vì id
-    const requestId = request.inboundRequestId || request.id;
+    const requestId = request.id;
 
     if (!requestId) {
       Alert.alert('Lỗi', 'Không tìm thấy ID yêu cầu để hủy');
@@ -106,7 +106,7 @@ export default function WarehouseRequestDetailScreen() {
   if (loading) {
     return (
       <Background>
-        <Header title="Chi tiết yêu cầu" showBack />
+        <Header title="Chi tiết yêu cầu" showBack={true} text={undefined} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FD7622" />
           <Text style={styles.loadingText}>Đang tải...</Text>
@@ -118,7 +118,7 @@ export default function WarehouseRequestDetailScreen() {
   if (!request) {
     return (
       <Background>
-        <Header title="Chi tiết yêu cầu" showBack />
+        <Header title="Chi tiết yêu cầu" showBack text={undefined} />
         <View style={styles.errorContainer}>
           <MaterialCommunityIcons name="alert-circle" size={64} color="#EF4444" />
           <Text style={styles.errorTitle}>Không tìm thấy yêu cầu</Text>
@@ -132,7 +132,7 @@ export default function WarehouseRequestDetailScreen() {
 
   return (
     <Background>
-      <Header title="Chi tiết yêu cầu" showBack />
+      <Header title="Chi tiết yêu cầu" showBack text={undefined} />
 
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         <Card style={styles.card}>

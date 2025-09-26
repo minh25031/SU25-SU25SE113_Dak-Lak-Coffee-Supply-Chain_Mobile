@@ -1,43 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getAllFarmerReports } from '../../core/api/generalFarmerReports.api';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { EmptyState } from '@/components/common/EmptyState';
+import { useFarmerReport } from '@/core/hooks/useFarmerReport';
 import { GeneralFarmerReportViewAllDto } from '../../core/api/generalFarmerReports.api';
 import Background from '../../components/Background';
 
 export default function FarmerReportsListScreen() {
     const router = useRouter();
-    const [reports, setReports] = useState<GeneralFarmerReportViewAllDto[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-
-    useEffect(() => {
-        fetchReports();
-    }, []);
-
-    const fetchReports = async () => {
-        try {
-            setLoading(true);
-            const data = await getAllFarmerReports();
-            // Sắp xếp theo ngày mới nhất
-            const sortedData = data.sort((a, b) =>
-                new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime()
-            );
-            setReports(sortedData);
-        } catch (error) {
-            console.error('❌ Error fetching reports:', error);
-            Alert.alert('Lỗi', 'Không thể tải danh sách báo cáo');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const onRefresh = async () => {
-        setRefreshing(true);
-        await fetchReports();
-        setRefreshing(false);
-    };
+    const { reports, loading, refreshing, error, onRefresh } = useFarmerReport();
 
     const handleCreateReport = () => {
         router.push('/farmer-reports/create');
@@ -151,9 +125,15 @@ export default function FarmerReportsListScreen() {
     if (loading) {
         return (
             <Background>
-                <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Đang tải danh sách báo cáo...</Text>
-                </View>
+                <LoadingSpinner message="Đang tải danh sách báo cáo..." />
+            </Background>
+        );
+    }
+
+    if (error) {
+        return (
+            <Background>
+                <ErrorMessage message={error} onRetry={onRefresh} />
             </Background>
         );
     }
@@ -231,19 +211,13 @@ export default function FarmerReportsListScreen() {
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                     }
                     ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Ionicons name="document-outline" size={64} color="#9CA3AF" />
-                            <Text style={styles.emptyTitle}>Chưa có báo cáo nào</Text>
-                            <Text style={styles.emptySubtitle}>
-                                Tạo báo cáo đầu tiên để nhận tư vấn kỹ thuật
-                            </Text>
-                            <TouchableOpacity
-                                style={styles.emptyButton}
-                                onPress={handleCreateReport}
-                            >
-                                <Text style={styles.emptyButtonText}>Tạo báo cáo mới</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <EmptyState
+                            icon="document-outline"
+                            title="Chưa có báo cáo nào"
+                            subtitle="Tạo báo cáo đầu tiên để nhận tư vấn kỹ thuật"
+                            actionText="Tạo báo cáo mới"
+                            onAction={handleCreateReport}
+                        />
                     }
                 />
             </View>

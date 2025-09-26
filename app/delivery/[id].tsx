@@ -471,9 +471,9 @@ export default function ShipmentDetailScreen() {
               <Divider style={styles.divider} />
 
               {currentShipment.shipmentDetails?.map((detail, index) => {
-                // Lấy thông tin kho tương ứng (có thể có nhiều kho)
-                const warehouse = currentShipment.warehouses?.[index] || currentShipment.warehouses?.[0];
-                
+                // Lấy thông tin kho từ detail.warehouse (thông tin chính xác cho sản phẩm này)
+                const warehouse = detail.warehouse;
+
                 return (
                   <View key={detail.shipmentDetailId} style={styles.detailSection}>
                     {/* Warehouse Information */}
@@ -515,8 +515,8 @@ export default function ShipmentDetailScreen() {
                   </View>
                 );
               }) || (
-                <Text style={styles.detailNote}>Không có chi tiết sản phẩm</Text>
-              )}
+                  <Text style={styles.detailNote}>Không có chi tiết sản phẩm</Text>
+                )}
 
               {/* Fallback message if no warehouse info */}
               {(!currentShipment.warehouses || currentShipment.warehouses.length === 0) && (

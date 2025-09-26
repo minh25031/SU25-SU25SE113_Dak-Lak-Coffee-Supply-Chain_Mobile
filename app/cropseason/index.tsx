@@ -1,33 +1,25 @@
 import BackButton from "@/components/BackButton";
-import {
-    CropSeasonListItem,
-    getCropSeasonsForCurrentUser,
-    CropSeasonStatusValue,
-    CropSeasonStatusLabels,
-} from "@/core/api/cropSeason.api";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { ErrorMessage } from "@/components/common/ErrorMessage";
+import { useCropSeason } from "@/core/hooks/useCropSeason";
+import { CropSeasonStatusValue, CropSeasonStatusLabels } from "@/core/api/cropSeason.api";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
-    ActivityIndicator,
-    Alert,
     FlatList,
-    Pressable,
     StyleSheet,
     Text,
     View,
     RefreshControl,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
-import { Snackbar, FAB } from "react-native-paper";
+import { Snackbar } from "react-native-paper";
+import { FloatingActionButton } from "@/components/common/FloatingActionButton";
 import CropSeasonCard from "./components/CropSeasonCard";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function CropSeasonListScreen() {
-    const [data, setData] = useState<CropSeasonListItem[]>([]);
-    const [filteredData, setFilteredData] = useState<CropSeasonListItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const router = useRouter();
+    const { cropSeasons, loading, refreshing, error, onRefresh } = useCropSeason();
 
     const [statusOpen, setStatusOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<string | null>("all");
@@ -42,90 +34,34 @@ export default function CropSeasonListScreen() {
     const [snackbarVisible, setSnackbarVisible] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState("");
 
-    const showSnackbar = (msg: string) => {
+    const showSnackbar = useCallback((msg: string) => {
         setSnackbarMessage(msg);
         setSnackbarVisible(true);
-    };
-
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const startTime = Date.now();
-
-            // Kiểm tra authentication trước khi gọi API
-            const token = await AsyncStorage.getItem('authToken');
-            if (!token) {
-                console.error('❌ Không có auth token');
-                showSnackbar("Vui lòng đăng nhập lại.");
-                router.replace('/(auth)/login');
-                return;
-            }
-
-            const response = await getCropSeasonsForCurrentUser();
-
-            const loadTime = Date.now() - startTime;
-
-            // Response đã được xử lý trong API function, luôn là array
-            setData(response);
-            setFilteredData(response);
-        } catch (error: any) {
-            console.error('❌ Lỗi khi tải mùa vụ:', error);
-
-            // Xử lý lỗi authentication
-            if (error.response?.status === 401) {
-                showSnackbar("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-                router.replace('/(auth)/login');
-                return;
-            }
-
-            // Xử lý lỗi 400
-            if (error.response?.status === 400) {
-                showSnackbar("Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.");
-                return;
-            }
-
-            showSnackbar("Lỗi khi tải danh sách mùa vụ.");
-            setData([]);
-            setFilteredData([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const onRefresh = async () => {
-        setRefreshing(true);
-        await fetchData();
-        setRefreshing(false);
-    };
-
-    useEffect(() => {
-        fetchData();
     }, []);
 
-    useEffect(() => {
-        if (data && Array.isArray(data)) {
-            const filtered = data.filter(
-                (item) => selectedStatus === "all" || item.status === selectedStatus
-            );
+    // Filter and sort data based on selected status
+    const filteredData = React.useMemo(() => {
+        if (!cropSeasons || !Array.isArray(cropSeasons)) return [];
 
-            // Sắp xếp mùa vụ theo thứ tự ưu tiên: Active -> Paused -> Completed -> Cancelled
-            const sortedData = [...filtered].sort((a, b) => {
-                const statusPriority = {
-                    'Active': 1,      // Đang hoạt động - ưu tiên cao nhất
-                    'Paused': 2,      // Tạm dừng
-                    'Completed': 3,   // Hoàn thành
-                    'Cancelled': 4    // Đã hủy - ưu tiên thấp nhất
-                };
+        const filtered = cropSeasons.filter(
+            (item) => selectedStatus === "all" || item.status === selectedStatus
+        );
 
-                const priorityA = statusPriority[a.status as keyof typeof statusPriority] || 5;
-                const priorityB = statusPriority[b.status as keyof typeof statusPriority] || 5;
+        // Sort by priority: Active -> Paused -> Completed -> Cancelled
+        return filtered.sort((a, b) => {
+            const statusPriority = {
+                'Active': 1,
+                'Paused': 2,
+                'Completed': 3,
+                'Cancelled': 4
+            };
 
-                return priorityA - priorityB;
-            });
+            const priorityA = statusPriority[a.status as keyof typeof statusPriority] || 5;
+            const priorityB = statusPriority[b.status as keyof typeof statusPriority] || 5;
 
-            setFilteredData(sortedData);
-        }
-    }, [selectedStatus, data]);
+            return priorityA - priorityB;
+        });
+    }, [cropSeasons, selectedStatus]);
 
     const handleEdit = (id: string) => {
         router.push(`/cropseason/${id}/edit`);
@@ -148,12 +84,11 @@ export default function CropSeasonListScreen() {
     );
 
     if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#FD7622" />
-                <Text style={styles.loadingText}>Đang tải danh sách mùa vụ...</Text>
-            </View>
-        );
+        return <LoadingSpinner message="Đang tải danh sách mùa vụ..." />;
+    }
+
+    if (error) {
+        return <ErrorMessage message={error} onRetry={onRefresh} />;
     }
 
     return (
@@ -213,11 +148,11 @@ export default function CropSeasonListScreen() {
             )}
 
             {/* FAB for Create */}
-            <FAB
+            <FloatingActionButton
                 icon="plus"
-                style={styles.fab}
                 onPress={handleCreate}
-                label="Tạo mùa vụ"
+                size="large"
+                style={styles.fab}
             />
 
             {/* Snackbar */}
@@ -311,9 +246,7 @@ const styles = StyleSheet.create({
     },
     fab: {
         position: 'absolute',
-        margin: 16,
-        right: 0,
-        bottom: 0,
-        backgroundColor: '#FD7622',
+        right: 20,
+        bottom: 20,
     },
 });

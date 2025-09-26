@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Tabs } from 'expo-router';
-import { StyleSheet, Text, AppState, AppStateStatus } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { AppState, AppStateStatus, StyleSheet } from 'react-native';
+import { Colors, Spacing, Typography } from '@/core/constants';
 
 export default function TabLayout() {
     const [userRole, setUserRole] = useState<string>('');
@@ -50,7 +51,7 @@ export default function TabLayout() {
                 if (newRole !== userRole) {
                     lastRoleRef.current = newRole;
                     setUserRole(newRole);
-                    setKey(prev => prev + 1); // Force re-render
+                    setKey(prev => prev + 1);
                 }
             } else {
                 const newRole = 'Farmer';
@@ -61,7 +62,7 @@ export default function TabLayout() {
                 }
             }
         } catch (error) {
-            console.error('❌ Error loading user role:', error);
+            console.error('Error loading user role:', error);
             const newRole = 'Farmer';
             if (newRole !== userRole) {
                 lastRoleRef.current = newRole;
@@ -87,8 +88,8 @@ export default function TabLayout() {
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: styles.tabBar,
-                tabBarActiveTintColor: '#FD7622',
-                tabBarInactiveTintColor: '#9CA3AF',
+                tabBarActiveTintColor: Colors.primary,
+                tabBarInactiveTintColor: Colors.text.disabled,
                 tabBarLabelStyle: styles.tabLabel,
                 tabBarIconStyle: {},
             }}
@@ -117,11 +118,11 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
     tabBar: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: Colors.surface,
         borderTopWidth: 1,
-        borderTopColor: '#E5E7EB',
-        paddingTop: 8,
-        paddingBottom: 8,
+        borderTopColor: Colors.border,
+        paddingTop: Spacing.sm,
+        paddingBottom: Spacing.sm,
         height: 80,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -2 },
@@ -130,9 +131,9 @@ const styles = StyleSheet.create({
         elevation: 8,
     },
     tabLabel: {
-        fontSize: 12,
-        fontWeight: '500',
-        marginTop: 4,
+        fontSize: Typography.fontSize.xs,
+        fontWeight: Typography.fontWeight.medium,
+        marginTop: Spacing.xs,
     },
 
 });

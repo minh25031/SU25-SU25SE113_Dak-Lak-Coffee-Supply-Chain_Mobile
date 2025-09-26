@@ -1,10 +1,13 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { ActivityIndicator, Button, Card, Searchbar } from 'react-native-paper';
+import { Button, Card, Searchbar } from 'react-native-paper';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import Background from '@/components/Background';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { EmptyState } from '@/components/common/EmptyState';
 import ShipmentCard from '@/components/ShipmentCard';
 import {
   getMyShipments,
@@ -32,30 +35,32 @@ export default function DeliveryDashboard() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const startTime = Date.now();
+      setError(null);
+      // const startTime = Date.now(); // Performance monitoring
 
       // Parallel loading với timeout protection và error handling
       const [shipmentsData, statisticsData] = await Promise.all([
         getMyShipments().catch(error => {
-          console.error('❌ Error loading shipments:', error);
+          console.error('Error loading shipments:', error);
           return [];
         }),
         getDeliveryStatistics().catch(error => {
-          console.error('❌ Error loading statistics:', error);
+          console.error('Error loading statistics:', error);
           return null;
         }),
       ]);
 
-      const loadTime = Date.now() - startTime;
 
       setShipments(shipmentsData);
       setStatistics(statisticsData);
     } catch (error) {
-      console.error('❌ Error loading delivery data:', error);
+      console.error('Error loading delivery data:', error);
+      setError('Không thể tải dữ liệu giao hàng');
     } finally {
       setLoading(false);
     }
@@ -77,16 +82,18 @@ export default function DeliveryDashboard() {
     router.push(`/delivery/${shipment.shipmentId}` as any);
   };
 
-  const filteredShipments = shipments.filter(shipment => {
-    const matchesSearch =
-      shipment.shipmentCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      shipment.orderCode.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredShipments = useMemo(() => {
+    return shipments.filter(shipment => {
+      const matchesSearch =
+        shipment.shipmentCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        shipment.orderCode.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus = !selectedStatus ||
-      shipment.deliveryStatus === selectedStatus;
+      const matchesStatus = !selectedStatus ||
+        shipment.deliveryStatus === selectedStatus;
 
-    return matchesSearch && matchesStatus;
-  });
+      return matchesSearch && matchesStatus;
+    });
+  }, [shipments, searchQuery, selectedStatus]);
 
   const statusOptions = [
     { value: '', label: 'Tất cả' },
@@ -100,10 +107,15 @@ export default function DeliveryDashboard() {
   if (loading && !refreshing) {
     return (
       <Background>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FD7622" />
-          <Text style={styles.loadingText}>Đang tải...</Text>
-        </View>
+        <LoadingSpinner message="Đang tải dữ liệu giao hàng..." />
+      </Background>
+    );
+  }
+
+  if (error) {
+    return (
+      <Background>
+        <ErrorMessage message={error} onRetry={onRefresh} />
       </Background>
     );
   }
@@ -217,20 +229,24 @@ export default function DeliveryDashboard() {
           </Text>
 
           {filteredShipments.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="truck-delivery-outline" size={64} color="#9CA3AF" />
-              <Text style={styles.emptyText}>
-                {searchQuery || selectedStatus
+            <EmptyState
+              icon="truck-delivery-outline"
+              title={
+                searchQuery || selectedStatus
                   ? 'Không tìm thấy chuyến giao phù hợp'
                   : 'Chưa có chuyến giao nào được phân công'
-                }
-              </Text>
-            </View>
+              }
+              subtitle={
+                searchQuery || selectedStatus
+                  ? 'Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc'
+                  : 'Các chuyến giao được phân công sẽ hiển thị ở đây'
+              }
+            />
           ) : (
             filteredShipments.map((shipment) => {
               // Null check để tránh crash
               if (!shipment) {
-                console.warn('⚠️ Delivery dashboard: shipment is null/undefined');
+                console.warn('Delivery dashboard: shipment is null/undefined');
                 return null;
               }
 
