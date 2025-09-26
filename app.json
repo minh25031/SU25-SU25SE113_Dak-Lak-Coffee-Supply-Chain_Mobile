@@ -41,10 +41,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "6d55a203-343a-418a-aa33-04e23f940232"
+        "projectId": "f4f70ab5-2344-4702-90a4-ac670585fc21"
       }
     },
-    "owner": "minh25031",
     "splash": {
       "image": "./assets/images/logo.jpg",
       "resizeMode": "contain",

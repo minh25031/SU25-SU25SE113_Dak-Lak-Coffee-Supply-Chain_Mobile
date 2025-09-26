@@ -1,48 +1,50 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { getAllOrders, Order } from '@/core/api/orders.api';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { EmptyState } from '@/components/common/EmptyState';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    RefreshControl,
     FlatList,
-    ActivityIndicator,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { getAllOrders, Order, OrderItem } from '@/core/api/orders.api';
 
 export default function OrdersScreen() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [selectedStatus, setSelectedStatus] = useState<string>('all');
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
     // Load orders từ API
     const loadOrders = useCallback(async () => {
         try {
             setLoading(true);
+            setError(null);
 
             const ordersData = await getAllOrders();
 
             setOrders(ordersData);
         } catch (error) {
-            console.error('❌ Error loading orders:', error);
-            // Giữ lại dữ liệu cũ nếu có lỗi
+            console.error('Error loading orders:', error);
+            setError('Không thể tải danh sách đơn hàng');
         } finally {
             setLoading(false);
         }
     }, []);
 
-    // Refresh data
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await loadOrders();
         setRefreshing(false);
     }, [loadOrders]);
 
-    // Load data khi focus vào screen
     useFocusEffect(
         useCallback(() => {
             loadOrders();
@@ -128,9 +130,11 @@ export default function OrdersScreen() {
         }
     };
 
-    const filteredOrders = orders.filter(order =>
-        selectedStatus === 'all' || order.status?.toLowerCase() === selectedStatus
-    );
+    const filteredOrders = useMemo(() => {
+        return orders.filter(order =>
+            selectedStatus === 'all' || order.status?.toLowerCase() === selectedStatus
+        );
+    }, [orders, selectedStatus]);
 
     const renderOrderItem = ({ item }: { item: Order }) => (
         <TouchableOpacity
@@ -175,12 +179,11 @@ export default function OrdersScreen() {
     );
 
     if (loading && !refreshing) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#8B5CF6" />
-                <Text style={styles.loadingText}>Đang tải đơn hàng...</Text>
-            </View>
-        );
+        return <LoadingSpinner message="Đang tải đơn hàng..." />;
+    }
+
+    if (error) {
+        return <ErrorMessage message={error} onRetry={onRefresh} />;
     }
 
     return (
@@ -242,10 +245,13 @@ export default function OrdersScreen() {
                 }
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>Không có đơn hàng nào</Text>
-                        <Text style={styles.emptySubtext}>Hãy tạo đơn hàng mới hoặc kiểm tra lại bộ lọc</Text>
-                    </View>
+                    <EmptyState
+                        icon="shopping-cart-outline"
+                        title="Không có đơn hàng nào"
+                        subtitle="Hãy tạo đơn hàng mới hoặc kiểm tra lại bộ lọc"
+                        actionText="Tạo đơn hàng mới"
+                        onAction={() => router.push('/orders/new' as any)}
+                    />
                 }
             />
 

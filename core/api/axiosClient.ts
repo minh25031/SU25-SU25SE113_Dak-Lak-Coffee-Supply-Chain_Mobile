@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { API_BASE_URL } from '@env';
 
-// const BASE_URL = 'http://10.0.2.2:5077/api'; // Cho Android Emulator
-const BASE_URL = 'https://daklak.coffee.techtheworld.id.vn/api';
+const BASE_URL = API_BASE_URL || 'http://10.0.2.2:5077/api'; // Fallback to local if env not set
 
 // Retry configuration
 const RETRY_CONFIG = {
@@ -104,7 +104,7 @@ api.interceptors.response.use(
       console.error('⏰ Request timeout - Server may be slow or network issue');
     }
     
-    return Promise.reject(error);
+    return Promise.reject(new Error(error.message || 'API request failed'));
   }
 );
 

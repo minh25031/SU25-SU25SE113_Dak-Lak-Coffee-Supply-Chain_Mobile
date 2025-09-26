@@ -36,6 +36,7 @@ export interface ShipmentDetail {
   quantity: number;
   unit: string;
   note?: string;
+  warehouse?: WarehouseInfo; // Thông tin kho xuất hàng cho sản phẩm này
 }
 
 export interface UpdateShipmentStatusPayload {

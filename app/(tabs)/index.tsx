@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
     View,
     Text,
@@ -7,13 +7,17 @@ import {
     TouchableOpacity,
     RefreshControl,
     Image,
+    Animated,
+    // Dimensions, // Unused for now
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CarouselBanner from '@/components/CarouselBanner';
 import { dashboardAPI, MenuItem, DashboardStats, ActivityItem } from '@/core/api/dashboard.api';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SkeletonDashboard from '@/components/SkeletonDashboard';
+import { Colors, Spacing, Typography, Components, Animations } from '@/core/constants';
 
 
 interface UserInfo {
@@ -21,6 +25,8 @@ interface UserInfo {
     role: string;
     avatar?: string;
 }
+
+// const { width } = Dimensions.get('window'); // Unused for now
 
 export default function HomeScreen() {
     const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
@@ -32,13 +38,29 @@ export default function HomeScreen() {
     const router = useRouter();
     const scrollViewRef = useRef<ScrollView>(null);
 
-    useEffect(() => {
-        loadUserInfo();
-    }, []);
+    // Animation values
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
+    const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
+    const startAnimations = useCallback(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: Animations.values.fade.to,
+                ...Animations.configs.fadeIn,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: Animations.values.slide.to,
+                ...Animations.configs.slideUp,
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: Animations.values.scale.to,
+                ...Animations.configs.scale,
+            }),
+        ]).start();
+    }, [fadeAnim, slideAnim, scaleAnim]);
 
-
-    const loadUserInfo = async () => {
+    const loadUserInfo = useCallback(async () => {
         try {
             const userInfoStr = await AsyncStorage.getItem('userInfo');
 
@@ -50,24 +72,29 @@ export default function HomeScreen() {
                 await loadDashboardData(user.role);
             }
         } catch (error) {
-            console.error('❌ Error loading user info:', error);
+            console.error('Error loading user info:', error);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        loadUserInfo();
+        startAnimations();
+    }, [loadUserInfo, startAnimations]);
 
     const loadDashboardData = async (role: string) => {
         try {
             setLoading(true);
-            const startTime = Date.now();
+            // const startTime = Date.now(); // Performance monitoring
 
             const dashboardData = await dashboardAPI.getDashboardDataOptimized(role);
 
-            const loadTime = Date.now() - startTime;
+            // const loadTime = Date.now() - startTime; // Performance monitoring
 
             setMenuItems(dashboardData.menuItems);
             setStats(dashboardData.stats);
             setActivities(dashboardData.activities);
         } catch (error) {
-            console.error('❌ Error loading dashboard data:', error);
+            console.error('Error loading dashboard data:', error);
         } finally {
             setLoading(false);
         }
@@ -141,13 +168,27 @@ export default function HomeScreen() {
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
         >
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerTop}>
+            {/* Header with Gradient */}
+            <LinearGradient
+                colors={Colors.gradients.primary}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.header}
+            >
+                <Animated.View
+                    style={[
+                        styles.headerTop,
+                        {
+                            opacity: fadeAnim,
+                            transform: [{ translateY: slideAnim }]
+                        }
+                    ]}
+                >
                     <View style={styles.userInfo}>
                         <Text style={styles.greeting}>{getGreeting()}</Text>
                         <Text style={styles.userName}>{userInfo?.name || 'Người dùng'}</Text>
                         <View style={styles.roleContainer}>
+                            <MaterialCommunityIcons name="badge-account" size={Spacing.icon.sm} color={Colors.text.inverse} />
                             <Text style={styles.roleLabel}>{getRoleLabel(userInfo?.role || '')}</Text>
                         </View>
                     </View>
@@ -159,15 +200,18 @@ export default function HomeScreen() {
                                 resizeMode="cover"
                             />
                         ) : (
-                            <View style={styles.defaultAvatar}>
+                            <LinearGradient
+                                colors={['rgba(255, 255, 255, 0.3)', 'rgba(255, 255, 255, 0.1)']}
+                                style={styles.defaultAvatar}
+                            >
                                 <Text style={styles.defaultAvatarText}>
                                     {userInfo?.name?.charAt(0)?.toUpperCase() || 'U'}
                                 </Text>
-                            </View>
+                            </LinearGradient>
                         )}
                     </TouchableOpacity>
-                </View>
-            </View>
+                </Animated.View>
+            </LinearGradient>
 
 
 
@@ -178,70 +222,129 @@ export default function HomeScreen() {
 
 
 
-            {/* Quick Stats */}
-            <View style={styles.statsContainer}>
+            {/* Quick Stats with Animations */}
+            <Animated.View
+                style={[
+                    styles.statsContainer,
+                    {
+                        opacity: fadeAnim,
+                        transform: [{ translateY: slideAnim }, { scale: scaleAnim }]
+                    }
+                ]}
+            >
                 <Text style={styles.sectionTitle}>Tổng quan</Text>
                 <View style={styles.statsGrid}>
                     {stats.map((stat, index) => (
-                        <View key={index} style={[styles.statCard, { flex: 1, marginHorizontal: 4 }]}>
-                            <MaterialCommunityIcons
-                                name={stat.icon as any}
-                                size={32}
-                                color="#FD7622"
-                                style={styles.statIcon}
-                            />
-                            <Text style={styles.statNumber}>{stat.number}</Text>
-                            <Text style={styles.statLabel}>{stat.label}</Text>
-                        </View>
+                        <Animated.View
+                            key={index}
+                            style={[
+                                styles.statCard,
+                                {
+                                    flex: 1,
+                                    marginHorizontal: 4,
+                                    transform: [{
+                                        translateY: slideAnim.interpolate({
+                                            inputRange: [0, 50],
+                                            outputRange: [0, 20 * (index + 1)],
+                                        })
+                                    }]
+                                }
+                            ]}
+                        >
+                            <LinearGradient
+                                colors={[Colors.surface, Colors.background]}
+                                style={styles.statCardGradient}
+                            >
+                                <View style={styles.statIconContainer}>
+                                    <MaterialCommunityIcons
+                                        name={stat.icon as any}
+                                        size={Components.statCard.iconSize}
+                                        color={Colors.primary}
+                                    />
+                                </View>
+                                <Text style={styles.statNumber}>{stat.number}</Text>
+                                <Text style={styles.statLabel}>{stat.label}</Text>
+                            </LinearGradient>
+                        </Animated.View>
                     ))}
                 </View>
-            </View>
+            </Animated.View>
 
-            {/* Quick Actions */}
-            <View style={styles.actionsContainer}>
+            {/* Quick Actions with Enhanced Design */}
+            <Animated.View
+                style={[
+                    styles.actionsContainer,
+                    {
+                        opacity: fadeAnim,
+                        transform: [{ translateY: slideAnim }]
+                    }
+                ]}
+            >
                 <Text style={styles.sectionTitle}>Thao tác nhanh</Text>
                 <View style={styles.menuGrid}>
-                    {filteredMenuItems.map((item) => (
-                        <TouchableOpacity
+                    {filteredMenuItems.map((item, index) => (
+                        <Animated.View
                             key={item.id}
-                            style={[styles.menuItem, { borderLeftColor: item.color }]}
-                            onPress={() => router.push(item.route as any)}
+                            style={{
+                                transform: [{
+                                    translateX: slideAnim.interpolate({
+                                        inputRange: [0, 50],
+                                        outputRange: [0, -20 * (index + 1)],
+                                    })
+                                }]
+                            }}
                         >
-                            <MaterialCommunityIcons
-                                name={item.icon as any}
-                                size={32}
-                                color={item.color || '#FD7622'}
-                                style={styles.menuIcon}
-                            />
-                            <View style={styles.menuContent}>
-                                <Text style={styles.menuTitle}>{item.title}</Text>
-                                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-                            </View>
-                            <Text style={styles.menuArrow}>→</Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.menuItem, { borderLeftColor: item.color }]}
+                                onPress={() => router.push(item.route as any)}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={[Colors.surface, Colors.background]}
+                                    style={styles.menuItemGradient}
+                                >
+                                    <View style={[styles.menuIconContainer, { backgroundColor: `${item.color || Colors.primary}20` }]}>
+                                        <MaterialCommunityIcons
+                                            name={item.icon as any}
+                                            size={Components.menuItem.iconSize}
+                                            color={item.color || Colors.primary}
+                                        />
+                                    </View>
+                                    <View style={styles.menuContent}>
+                                        <Text style={styles.menuTitle}>{item.title}</Text>
+                                        <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                                    </View>
+                                    <View style={styles.menuArrowContainer}>
+                                        <MaterialCommunityIcons name="chevron-right" size={Spacing.icon.lg} color={Colors.gray[400]} />
+                                    </View>
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </Animated.View>
                     ))}
 
                     {/* Nút Tư vấn cho Farmer */}
                     {userInfo?.role === 'Farmer' && (
                         <TouchableOpacity
-                            style={[styles.menuItem, { borderLeftColor: '#10B981' }]}
+                            style={[styles.menuItem, { borderLeftColor: Colors.success }]}
                             onPress={() => router.push('/farmer-reports')}
                         >
                             <MaterialCommunityIcons
                                 name="message-text"
-                                size={32}
-                                color="#10B981"
+                                size={Spacing.icon.xxl}
+                                color={Colors.success}
                                 style={styles.menuIcon}
                             />
                             <View style={styles.menuContent}>
                                 <Text style={styles.menuTitle}>Tư vấn kỹ thuật</Text>
                                 <Text style={styles.menuSubtitle}>Gửi báo cáo và nhận tư vấn</Text>
                             </View>
-                            <Text style={styles.menuArrow}>→</Text>
+                            <View style={styles.menuArrowContainer}>
+                                <MaterialCommunityIcons name="chevron-right" size={Spacing.icon.lg} color={Colors.gray[400]} />
+                            </View>
                         </TouchableOpacity>
                     )}
                 </View>
-            </View>
+            </Animated.View>
 
             {/* Recent Activities */}
             <View style={styles.activityContainer}>
@@ -252,8 +355,8 @@ export default function HomeScreen() {
                             <View style={styles.activityIcon}>
                                 <MaterialCommunityIcons
                                     name={activity.icon as any}
-                                    size={20}
-                                    color="#6B7280"
+                                    size={Components.activityItem.iconSize}
+                                    color={Colors.text.secondary}
                                 />
                             </View>
                             <View style={styles.activityContent}>
@@ -277,20 +380,24 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FEFAF4',
+        backgroundColor: Colors.background,
     },
     scrollContent: {
         flexGrow: 1,
-        paddingBottom: 30,
+        paddingBottom: Spacing.sectionMargin,
         minHeight: '100%',
     },
     header: {
-        backgroundColor: '#FD7622',
-        paddingTop: 60,
-        paddingBottom: 30,
-        paddingHorizontal: 24,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+        paddingTop: Components.header.paddingTop,
+        paddingBottom: Components.header.paddingBottom,
+        paddingHorizontal: Components.header.paddingHorizontal,
+        borderBottomLeftRadius: Components.header.borderRadius,
+        borderBottomRightRadius: Components.header.borderRadius,
+        shadowColor: Colors.primary,
+        shadowOffset: Spacing.shadow.lg,
+        shadowOpacity: 0.3,
+        shadowRadius: Spacing.shadow.lg.height,
+        elevation: 8,
     },
     headerTop: {
         flexDirection: 'row',
@@ -301,120 +408,142 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     greeting: {
-        fontSize: 16,
+        fontSize: Typography.fontSize.md,
         color: 'rgba(255, 255, 255, 0.8)',
-        marginBottom: 4,
+        marginBottom: Spacing.xs,
     },
     userName: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-        marginBottom: 8,
+        fontSize: Typography.fontSize.xxl,
+        fontWeight: Typography.fontWeight.bold,
+        color: Colors.text.inverse,
+        marginBottom: Spacing.sm,
     },
     roleContainer: {
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: Spacing.xs,
+        borderRadius: Spacing.radius.xl,
         alignSelf: 'flex-start',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: Spacing.xs,
     },
     roleLabel: {
-        fontSize: 14,
-        color: '#FFFFFF',
-        fontWeight: '500',
+        fontSize: Typography.fontSize.sm,
+        color: Colors.text.inverse,
+        fontWeight: Typography.fontWeight.medium,
     },
     avatarContainer: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+        ...Components.avatar.md,
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     avatar: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+        ...Components.avatar.md,
     },
     defaultAvatar: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+        ...Components.avatar.md,
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     defaultAvatarText: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
+        fontSize: Typography.fontSize.xxl,
+        fontWeight: Typography.fontWeight.bold,
+        color: Colors.text.inverse,
     },
 
     bannerContainer: {
         marginTop: -20,
-        marginHorizontal: 24,
-        marginBottom: 30,
+        marginHorizontal: Spacing.lg,
+        marginBottom: Spacing.sectionMargin,
     },
 
     statsContainer: {
-        paddingHorizontal: 24,
-        marginBottom: 30,
+        paddingHorizontal: Spacing.lg,
+        marginBottom: Spacing.sectionMargin,
     },
     sectionTitle: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#1F2937',
-        marginBottom: 20,
+        fontSize: Typography.fontSize.xl,
+        fontWeight: Typography.fontWeight.semibold,
+        color: Colors.text.primary,
+        marginBottom: Spacing.lg,
     },
     statsGrid: {
         flexDirection: 'row',
-        gap: 12,
+        gap: Spacing.md,
     },
     statCard: {
-        backgroundColor: '#FFFFFF',
-        padding: 20,
-        borderRadius: 16,
-        alignItems: 'center',
+        borderRadius: Components.statCard.borderRadius,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowOffset: Spacing.shadow.lg,
+        shadowOpacity: Components.statCard.shadowOpacity,
+        shadowRadius: Components.statCard.shadowRadius,
+        elevation: Components.statCard.elevation,
+    },
+    statCardGradient: {
+        padding: Components.statCard.padding,
+        borderRadius: Components.statCard.borderRadius,
+        alignItems: 'center',
+        minHeight: Components.statCard.minHeight,
+        justifyContent: 'center',
+    },
+    statIconContainer: {
+        width: Components.statCard.iconContainerSize,
+        height: Components.statCard.iconContainerSize,
+        borderRadius: Components.statCard.iconContainerSize / 2,
+        backgroundColor: `${Colors.primary}20`,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: Spacing.md,
     },
     statIcon: {
         marginBottom: 8,
         alignSelf: 'center',
     },
     statNumber: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1F2937',
-        marginBottom: 4,
+        fontSize: Typography.fontSize.xxl,
+        fontWeight: Typography.fontWeight.bold,
+        color: Colors.text.primary,
+        marginBottom: Spacing.xs,
     },
     statLabel: {
-        fontSize: 14,
-        color: '#6B7280',
+        fontSize: Typography.fontSize.sm,
+        color: Colors.text.secondary,
         textAlign: 'center',
     },
     actionsContainer: {
-        paddingHorizontal: 24,
-        marginBottom: 30,
+        paddingHorizontal: Spacing.lg,
+        marginBottom: Spacing.sectionMargin,
     },
     menuGrid: {
-        gap: 12,
+        gap: Spacing.md,
     },
     menuItem: {
-        backgroundColor: '#FFFFFF',
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 20,
-        borderRadius: 16,
+        borderRadius: Components.menuItem.borderRadius,
         borderLeftWidth: 4,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowOffset: Spacing.shadow.lg,
+        shadowOpacity: Components.card.shadowOpacity,
+        shadowRadius: Components.card.shadowRadius,
+        elevation: Components.card.elevation,
+        marginBottom: Spacing.md,
+    },
+    menuItemGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: Components.menuItem.padding,
+        borderRadius: Components.menuItem.borderRadius,
+        minHeight: Components.menuItem.minHeight,
+    },
+    menuIconContainer: {
+        width: Components.menuItem.iconContainerSize,
+        height: Components.menuItem.iconContainerSize,
+        borderRadius: Components.menuItem.iconContainerSize / 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: Spacing.md,
     },
     menuIcon: {
         fontSize: 32,
@@ -424,73 +553,77 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     menuTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#1F2937',
-        marginBottom: 4,
+        fontSize: Typography.fontSize.lg,
+        fontWeight: Typography.fontWeight.semibold,
+        color: Colors.text.primary,
+        marginBottom: Spacing.xs,
     },
     menuSubtitle: {
-        fontSize: 14,
-        color: '#6B7280',
+        fontSize: Typography.fontSize.sm,
+        color: Colors.text.secondary,
     },
-    menuArrow: {
-        fontSize: 20,
-        color: '#9CA3AF',
+    menuArrowContainer: {
+        width: Spacing.icon.xxl + 6,
+        height: Spacing.icon.xxl + 6,
+        borderRadius: (Spacing.icon.xxl + 6) / 2,
+        backgroundColor: `${Colors.gray[400]}20`,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     activityContainer: {
-        paddingHorizontal: 24,
-        marginBottom: 30,
+        paddingHorizontal: Spacing.lg,
+        marginBottom: Spacing.sectionMargin,
     },
     activityList: {
-        gap: 16,
+        gap: Spacing.md,
     },
     activityItem: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: Colors.surface,
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
-        borderRadius: 12,
+        padding: Components.activityItem.padding,
+        borderRadius: Components.activityItem.borderRadius,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: Spacing.shadow.sm,
         shadowOpacity: 0.05,
-        shadowRadius: 2,
+        shadowRadius: Spacing.shadow.sm.height,
         elevation: 2,
     },
     activityIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        width: Components.activityItem.iconContainerSize,
+        height: Components.activityItem.iconContainerSize,
+        borderRadius: Components.activityItem.iconContainerSize / 2,
+        backgroundColor: Colors.surfaceVariant,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 16,
+        marginRight: Spacing.md,
     },
     activityContent: {
         flex: 1,
     },
     activityTitle: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#1F2937',
-        marginBottom: 4,
+        fontSize: Typography.fontSize.md,
+        fontWeight: Typography.fontWeight.medium,
+        color: Colors.text.primary,
+        marginBottom: Spacing.xs,
     },
     activityTime: {
-        fontSize: 14,
-        color: '#6B7280',
+        fontSize: Typography.fontSize.sm,
+        color: Colors.text.secondary,
     },
     footer: {
         alignItems: 'center',
-        paddingVertical: 30,
-        paddingHorizontal: 24,
+        paddingVertical: Spacing.sectionMargin,
+        paddingHorizontal: Spacing.lg,
     },
     footerText: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#6B7280',
-        marginBottom: 8,
+        fontSize: Typography.fontSize.md,
+        fontWeight: Typography.fontWeight.medium,
+        color: Colors.text.secondary,
+        marginBottom: Spacing.sm,
     },
     footerSubtext: {
-        fontSize: 14,
-        color: '#9CA3AF',
+        fontSize: Typography.fontSize.sm,
+        color: Colors.text.disabled,
     },
 });
